@@ -1,0 +1,13 @@
+Constructor Injection:
+There is no partial injection.
+It doesn’t override the setter property.
+It will create a new instance if any modification is done.
+It works better for many properties.
+
+
+
+Setter Injection:
+There can be a partial injection.
+It overrides the constructor property.
+It will not create a new instance if any modification is done.
+It works better for a few properties.

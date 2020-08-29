@@ -1,0 +1,14 @@
+The IoC container is responsible to instantiate, configure and assemble the objects. The IoC container gets informations from the XML
+file and works accordingly. The main tasks performed by IoC container are:
+
+	to instantiate the application class
+	to configure the object
+	to assemble the dependencies between the objects
+
+There are two types of IoC containers. They are:
+BeanFactory
+ApplicationContext
+
+The Spring container is at the core of the Spring Framework. The container will create the objects, wire them together, configure them,
+and manage their complete life cycle from creation till destruction. The Spring container uses DI to manage the components that make up 
+an application.
