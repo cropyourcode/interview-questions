@@ -1,0 +1,24 @@
+application.yml
+---
+spring:
+   profiles:
+      active: ${app.server.env}
+ 
+datasource: "java:jboss/datasources/PapiDS"       
+
+
+application-INT.yml
+spring:
+   batch:
+      job:
+         enabled: false
+   datasource:
+      driver-class-name: oracle.jdbc.OracleDriver
+      papi-wallet-id: PAPI_E_SPRING
+      dmud-wallet-id: DMUD_E_SPRING
+      wallet-location: /tech/oracle/product/wallet/papibatch_qa
+      tns-admin: tech/oracle/network
+      
+            
+
+      
