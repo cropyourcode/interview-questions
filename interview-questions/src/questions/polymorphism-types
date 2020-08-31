@@ -1,0 +1,16 @@
+
+In the last tutorial we discussed Polymorphism in Java. In this guide we will see types of polymorphism. There are two types of 
+polymorphism in java:
+1) Static Polymorphism also known as compile time polymorphism
+2) Dynamic Polymorphism also known as runtime polymorphism
+
+Compile time Polymorphism (or Static polymorphism)
+Polymorphism that is resolved during compiler time is known as static polymorphism. Method overloading is an example of compile time 
+polymorphism.
+Method Overloading: This allows us to have more than one method having the same name, if the parameters of methods are different in number, 
+sequence and data types of parameters. We have already discussed Method overloading here: If you didn’t read that guide, refer: Method Overloading in Java
+
+
+Runtime Polymorphism (or Dynamic polymorphism)
+It is also known as Dynamic Method Dispatch. Dynamic polymorphism is a process in which a call to an overridden method is resolved at runtime, 
+thats why it is called runtime polymorphism. I have already discussed method overriding in detail in a separate tutorial, refer it: Method Overriding in Java.

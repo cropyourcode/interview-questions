@@ -1,0 +1,19 @@
+A functional interface is an interface that contains only one abstract method. They can have only one functionality to exhibit. 
+From Java 8 onwards, lambda expressions can be used to represent the instance of a functional interface. A functional interface can have 
+any number of default methods. Runnable, ActionListener, Comparable are some of the examples of functional interfaces.
+
+
+
+An Interface that contains exactly one abstract method is known as functional interface. It can have any number of default, static 
+methods but can contain only one abstract 
+method. It can also declare methods of object class.
+
+Functional Interface is also known as Single Abstract Method Interfaces or SAM Interfaces. It is a new feature in Java, which helps 
+to achieve functional programming approach.
+
+
+Important Points/Observations:
+
+A functional interface has only one abstract method but it can have multiple default methods.
+@FunctionalInterface annotation is used to ensure an interface can’t have more than one abstract method. The use of this annotation is optional.
+The java.util.function package contains many builtin functional interfaces in Java 8.

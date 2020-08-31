@@ -1,0 +1,39 @@
+Difference between HashMap and ConcurrentHashMap in Java
+In this section, we will see some more details about HashMap and ConcurrentHashMap and compare them on various parameters like thread-safety, synchronization, 
+performance, ease of use etc.
+
+
+
+ 
+
+1) As I said the earlier first significant difference between HashMap and ConcurrentHashMap is that later is thread-safe and can be 
+used in a concurrent environment without external synchronization. Though it doesn't provide the same level of synchronization as 
+achieved by using Hashtable but it's enough for the most practical purpose.
+
+2)You can make HashMap synchronized by wrapping it on Collections.synchornizedMap(HashMap) which will return a collection which is 
+almost equivalent to Hashtable, where every modification operation on Map is locked on Map object while in case of ConcurrentHashMap, 
+thread-safety is achieved by dividing whole Map into different partition based upon Concurrency level and only locking particular 
+portion instead of locking the whole Map.
+
+Difference between ConcurrentHashMap and HashMap in Java Collection3) ConcurrentHashMap is more scalable and performs better than Synchronized 
+HashMap in the multi-threaded environment while in Single threaded environment both HashMap and ConcurrentHashMap gives comparable performance, 
+where HashMap only slightly better.
+
+
+In Summary Main difference between ConcurrentHashMap and HashMap in Java Collection turns out to be thread-safety, Scalability, and Synchronization. 
+ConcurrentHashMap is a better choice than synchronized HashMap if you are using them as cache, which is the most popular use case of a Map in Java 
+application. ConcurrentHashMap is more scalable and outperforms when a number of reader threads outnumber the number of writer threads.
+
+Read more: https://www.java67.com/2012/08/difference-between-hashmap-and-concurrentHashMap-java-collection.html#ixzz6Wi8ruMG1
+
+------
+
+Following are the notable differences between HashMap and ConcurrentHashMap classes in Java.
+
+ 	HashMap	ConcurrentHashMap
+Synchronized 		|	HashMap is not synchronized.	ConcurrentHashMap is synchronized.
+Thread Safe			| HashMap is not thread safe.	ConcurrentHashMap is thread safe.
+Iterator type		| HashMap iterator is fail-fast and ArrayList throws ConcurrentModificationException if concurrent modification happens during iteration.	ConcurrentHashMap is fail-safe and it will never throw ConcurrentModificationException during iteration.
+Null values			| HashMap allows key and value to be null.	ConcurrentHashMap does not allow null key/value. It will throw NullPointerException.
+Performance			| HashMap is faster.	ConcurrentHashMap is slower than HashMap.
+Since Java Version	| 1.2	1.5
