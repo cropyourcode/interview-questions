@@ -1,0 +1,21 @@
+https://springframework.guru/spring-framework-annotations/#:~:text=%40Service,used%20in%20the%20service%20layer.
+
+@EnableConfigServer
+This annotation is used at the class level. When developing a project with a number of services, you need to have a centralized and straightforward manner to configure and retrieve the configurations about all the services that you are going to develop. One advantage of using a centralized config server is that you don’t need to carry the burden of remembering where each configuration is distributed across multiple and distributed components.
+
+You can use Spring cloud’s @EnableConfigServer annotation to start a config server that the other applications can talk to.
+
+@EnableEurekaServer
+This annotation is applied to Java classes. One problem that you may encounter while decomposing your application into microservices is that, it becomes difficult for every service to know the address of every other service it depends on. There comes the discovery service which is responsible for tracking the locations of all other microservices.
+Netflix’s Eureka is an implementation of a discovery server and integration is provided by Spring Boot. Spring Boot has made it easy to design a Eureka Server by just annotating the entry class with @EnableEurekaServer.
+
+@EnableDiscoveryClient
+This annotation is applied to Java classes. In order to tell any application to register itself with Eureka you just need to add the @EnableDiscoveryClient annotation to the application entry point. The application that’s now registered with Eureka uses the Spring Cloud Discovery Client abstraction to interrogate the registry for its own host and port.
+
+@EnableCircuitBreaker
+This annotation is applied on Java classes that can act as the circuit breaker. The circuit breaker pattern can allow a micro service continue working when a related service fails, preventing the failure from cascading. This also gives the failed service a time to recover.
+
+The class annotated with @EnableCircuitBreaker will monitor, open, and close the circuit breaker.
+
+@HystrixCommand
+This annotation is used at the method level. Netflix’s Hystrix library provides the implementation of Circuit Breaker pattern. When you apply the circuit breaker to a method, Hystrix watches for the failures of the method. Once failures build up to a threshold, Hystrix opens the circuit so that the subsequent calls also fail. Now Hystrix redirects calls to the method and they are passed to the specified fallback methods.

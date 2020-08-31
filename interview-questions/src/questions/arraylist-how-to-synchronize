@@ -1,0 +1,3 @@
+
+In order to get a synchronized list from an ArrayList, we use the synchronizedList(List <T>) method in Java. The 
+Collections.synchronizedList(List <T>) method accepts the ArrayList as an argument and returns a thread safe list.

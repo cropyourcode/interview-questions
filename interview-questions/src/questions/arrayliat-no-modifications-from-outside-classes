@@ -1,0 +1,6 @@
+2 Ways.
+
+1)The getter that returns the ArrayList can clone before returning the object. This way, even if the outside entity modifies the object, they'll
+end up modifying the clone - not your original object. Note: The clone operation can be costly. I'd suggest the below option.
+
+2)Use Collections.unmodifiableList(..). Check the documentation here.

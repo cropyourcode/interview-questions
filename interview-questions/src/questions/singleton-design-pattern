@@ -1,0 +1,33 @@
+
+https://medium.com/@kevalpatel2106/how-to-make-the-perfect-singleton-de6b951dfdb0#:~:text=By%20making%20the%20constructor%20as,new%20instance%20of%20the%20class.
+
+The purpose of the Singleton class is to control object creation, limiting the number of objects to only one. The singleton allows only 
+one entry point to create the new instance of the class.
+
+1)Private Constructor - Eager Initialization and Lazy Initialization
+
+2)Make Singleton reflection proof - To prevent Singleton failure while due to reflection you have to throw a run-time exception in constructor,
+if the constructor is already initialized and some class to initialize it again.
+
+3)Make Singleton thread safe - If two threads try to initialize the Singleton class at almost the same time.
+	3.1) Make getInstance() synchronized: But, there are some cons of using this approach: 
+										Slow performance because of locking overhead.
+										Unnecessary synchronization that is not required once the instance variable is initialized.
+										
+    3.2) Double check locking method: You can overcome this issue if you use Double check locking method to create the Singleton.
+    In this, you will make the Singleton class in the synchronized block if the instance is null. So, the synchronized block will be executed only 
+    when the sSoleInstance is null and prevent unnecessary synchronization once the instance variable is initialized.
+
+    3.3) Use volatile keyword: On the surface, this method looks perfect, as you only need to pay price for synchronized block one time, but it 
+    still was broken, until you make sSoleInstance variable volatile. Without volatile modifier, it’s possible for another thread in Java to see 
+    half initialized state of sSoleInstance variable, but with volatile variable guaranteeing happens-before relationship, all the write will happen 
+    on volatile sSoleInstance before any read of sSoleInstance variable.
+    
+4)Make Singleton safe from Serialization - Sometimes in distributed systems, you need to implement Serializable interface in Singleton class. 
+By doing that you can store its state in the file system and retrieve it at later point of time. 
+
+The problem with above serialized singleton class is that whenever we deserialize it, it will create a new instance of the class.
+
+To prevent creation of another instance you have to provide the implementation of readResolve() method. readResolve() replaces the object read
+from the stream. This ensures that nobody can create another instance by serializing and deserializing the singleton.   
+										

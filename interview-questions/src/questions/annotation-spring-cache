@@ -1,0 +1,24 @@
+Cache-Based Annotations
+@Cacheable
+This annotation is used on methods. The simplest way of enabling the cache behaviour for a method is to annotate it with @Cacheable and parameterize it with the name of the cache where the results would be stored.
+
+@Cacheable("addresses")
+public String getAddress(Book book){...}
+In the snippet above , the method getAddress is associated with the cache named addresses. Each time the method is called, the cache is checked to see whether the invocation has been already executed and does not have to be repeated.
+
+@CachePut
+This annotation is used on methods. Whenever you need to update the cache without interfering the method execution, you can use the @CachePut annotation. That is, the method will always be executed and the result cached.
+
+@CachePut("addresses")
+public String getAddress(Book book){...}
+Using @CachePut and @Cacheable on the same method is strongly discouraged as the former forces the execution in order to execute a cache update, the latter causes the method execution to be skipped by using the cache.
+
+@CacheEvict
+This annotation is used on methods. It is not that you always want to populate the cache with more and more data. Sometimes you may want remove some cache data so that you can populate the cache with some fresh values. In such a case use the @CacheEvict annotation.
+
+@CacheEvict(value="addresses", allEntries="true")
+public String getAddress(Book book){...}
+Here an additional element allEntries is used along with the cache name to be emptied. It is set to true so that it clears all values and prepares to hold new data.
+
+@CacheConfig
+This annotation is a class level annotation. The @CacheConfig annotation helps to streamline some of the cache information at one place. Placing this annotation on a class does not turn on any caching operation. This allows you to store the cache configuration at the class level so that you don’t have declare things multiple times.

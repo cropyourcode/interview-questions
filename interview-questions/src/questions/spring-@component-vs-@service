@@ -1,0 +1,9 @@
+Difference between @Component, @Service, @Controller, and @Repository in Spring
+Here is a nice summary of what does @Component, @Service, @Controller, and @Repository annotation do in Spring Framework:
+@Component is a generic stereotype for any Spring-managed component or bean. 
+@Repository is a stereotype for the persistence layer.
+@Service is a stereotype for the service layer.
+@Controller is a stereotype for the presentation layer (spring-MVC).
+
+
+Read more: https://javarevisited.blogspot.com/2017/11/difference-between-component-service.html#ixzz6WhKzNPnS

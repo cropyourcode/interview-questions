@@ -1,0 +1,20 @@
+First level Cache vs. Second-level Cache in Hibernate
+Now that we have got some basic understanding of the first level and second level cache, here are some differences between them:
+
+1) The primary difference is that first level cache is maintained at the Session level while the second level cache is maintained at 
+SessionFactory level.
+
+2)  The data stored in the first level cache is accessible to the only Session who maintains it, while the second level cache is accessible to all.
+
+3) The first level cache is by default enabled while the second level cache is by default disabled.
+
+A couple of things to know about hibernate first level cache:
+
+1) You can use Session.evict() to remove the loaded entity from the first level cache, can use refresh() method to refresh the cache and 
+can use clear() method to remove all entities in cache.
+
+2) You cannot disable the first level cache, it always enabled.
+
+3) Hibernate entities or database rows remain in cache only until Session is open, once Session is closed, all associated cached data is lost.
+
+Read more: https://www.java67.com/2017/10/difference-between-first-level-and-second-level-cache-in-Hibernate.html#ixzz6WhJvLrxq
