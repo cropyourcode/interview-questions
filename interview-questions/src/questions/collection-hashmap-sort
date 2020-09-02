@@ -1,0 +1,15 @@
+Java HashMap does not preserve any order by default. If there is a need to sort HashMap we sort it explicitly based on the requirements. 
+Java provides an option to sort HashMap based on keys and values. In this section, we will learn how to sort HashMap according to keys and values.
+
+1) Sort HashMap by Keys
+	here are following ways to sort HashMap by keys:
+	1.1) By using TreeMap
+	1.2) By using LinkedHashMap
+2) Sort HashMap by Values
+
+	2.1) Sort HashMap by Values using Comparator Interface
+	
+	https://www.javatpoint.com/how-to-sort-hashmap-in-java#:~:text=Sort%20HashMap%20by%20Values%20using%20Comparator%20Interface&text=After%20that%20get%20the%20Set,the%20sorted%20elements%20into%20that.
+	
+Note : Refer URL	
+	

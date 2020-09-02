@@ -1,0 +1,26 @@
+Abstract class vs Interface in Java
+In the last section, we saw what is abstract class and interface and now let's see the difference between interface and abstract class in Java.
+
+1) First and the major difference between abstract class and an interface is that an abstract class is a class while the interface is an 
+interface, means by extending the abstract class you can not extend another class because Java does not support multiple inheritances but 
+you can implement multiple inheritance in Java.
+
+2) The second difference between interface and abstract class in Java is that you can not create a non-abstract method in an interface, 
+every method in an interface is by default abstract, but you can create a non-abstract method in abstract class. Even a class which doesn't 
+contain any abstract method can be made abstract by using the abstract keyword.
+
+3) The third difference between abstract class vs interface in Java is that interface is better suited for Type declaration and abstract 
+class is more suited for code reuse and evolution perspective. The Effective Java has one item dedicated to explaining about why you should be 
+using interface for type declaration. You should check that out as well.
+
+4) The fourth difference between abstract class and interface in Java is that abstract class are slightly faster than interface because interface 
+involves a search before calling any overridden method in Java. This is not a significant difference in most of the cases but if you are writing a 
+time critical application then you may not want to leave any stone unturned.
+
+5) Another notable difference between interface and abstract class is that when you add a new method in existing interface it breaks all its 
+implementation and you need to provide an implementation in all clients which is not good. By using an abstract class you can provide a default 
+implementation for a new method in the superclass without breaking existing clients.
+
+
+
+Read more: https://www.java67.com/2012/09/what-is-difference-between-interface-abstract-class-java.html#ixzz6Ws7abLfA

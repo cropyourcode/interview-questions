@@ -1,0 +1,11 @@
+Step 1 : First checks whether specified key is null or not. If the key is null, it calls getForNullKey() method.
+
+Step 2 : If the key is not null, hash code of the specified key is calculated.
+
+Step 3 : indexFor() method is used to find out the index of the specified key in the table[] array.
+
+Step 4 : After getting index, it will iterate though linked list at that position and checks for the key using equals() method. 
+If the key is found, it returns the value associated with it. otherwise returns null.
+
+
+https://javaconceptoftheday.com/how-hashmap-works-internally-in-java/#:~:text=The%20whole%20HashMap%20data%20structure,value%20is%20called%20hash%20code.
