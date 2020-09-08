@@ -1,0 +1,20 @@
+
+@SpringBootApplication
+@EnableAutoConfiguration
+MainApplication class
+
+@Autowire
+Jobluncher
+
+@Autowire
+@Qualifier
+Job
+
+psvm(){ SpringApplication.run(MainApplication.class, args)
+
+@Override
+void run(){ 
+JobParameters
+JobExecution = jobLauncher.run(jobname,jobparameter)
+
+##

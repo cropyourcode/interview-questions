@@ -1,0 +1,18 @@
+Spring cache is nothing but a store of key-value pairs, where values are the ones returned from @Cacheable methods, whereas, for 
+keys there has to be some strategy to generate them. In our application the cache is implemented on controller class.
+The controller will evict the cache memory at interval of 4 hours in a day. This is managed by spring provided cron element of @Scheduler
+annotation.
+The Cron expression is represented by six fields. Second,Minute,Hour,DayofMonth,Month,DaysofWeek.
+
+Below you can find the example patterns from the spring forum:
+
+* "0 0 * * * *" = the top of every hour of every day.
+* "*/10 * * * * *" = every ten seconds.
+* "0 0 8-10 * * *" = 8, 9 and 10 o'clock of every day.
+* "0 0 8,10 * * *" = 8 and 10 o'clock of every day.
+* "0 0/30 8-10 * * *" = 8:00, 8:30, 9:00, 9:30 and 10 o'clock every day.
+* "0 0 9-17 * * MON-FRI" = on the hour nine-to-five weekdays
+* "0 0 0 25 12 ?" = every Christmas Day at midnight
+Cron expression is represented by six fields:
+
+second, minute, hour, day of month, month, day(s) of week

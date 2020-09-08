@@ -1,0 +1,15 @@
+
+@Configuration
+@EnableTransactionManagement
+@EnableJpaRepository(entityManagerFactory,transactionManager,basePackage)
+DBCOnfigClass
+
+1)Creater a method to return Datasource object
+2)
+@Primary
+@Bean(name="entityManagerFactory")
+LocalContainerEntityManagerFactoryBean entityManagerFactory(EntityManagerFactoryBuilder,Datasource)
+3)
+@Primary
+@Bean(name="transactionManager")
+PlatformTransactionManager transactionManager(EntityManagerFactory)
