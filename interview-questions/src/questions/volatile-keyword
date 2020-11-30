@@ -10,4 +10,4 @@ copy of sharedVariable. If one thread modifies its value the change might not re
 This depends on the write policy of cache. Now the other thread is not aware of the modified value which leads to data inconsistency.
 
 
-Prakash Nayak
+Prakash MCA
