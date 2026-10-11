@@ -1,2 +1,52 @@
 01OCT2026-NTT-BY-Interview-Questions?
 1) How can cyclic dependency be avoided in Spring/Java.
+2)Given array[] a = {1,2,3,4,5}, Create an array with multiplication of all elements except the current index element, Do not used divide function?
+Kafka & Distributed Trannactions
+3)
+4)
+System Design / Architecture
+    Explain your current project architecture
+    Why did you choose specific technologies?
+    How would you design a scalable backend?
+    How do you handle high traffic?
+    How do you achieve high availability and fault tolerance?
+  Low-Level Design
+    A vending-machine-style design problem was discussed.
+  Production Scenarios
+    API response time suddenly increases
+    Downstream service becomes slow/unavailable
+    Kafka consumer lag increases
+    Database becomes a bottleneck
+    Pod/service becomes unhealthy
+    How would you identify the actual root cause?
+5)Kafka & Distributed Transactions
+  1. Your database transaction commits successfully, but publishing the event to Kafka fails. How would you handle it?
+  2. How do you ensure zero message loss in Kafka?
+  3. What is exponential backoff? How do you implement retries?
+  4. You have 20 Kafka consumers but only 8 partitions. How many consumers will actively process messages?
+6)Redis & Caching
+  5. How are you using Redis in your application?
+  6. Why did you choose the cache-aside pattern?
+  7. If 1,000 requests access the same Redis key immediately after expiry, how would you prevent a cache stampede?
+7)Production Scenarios & Microservices
+  8. Explain a critical production issue you handled and how you resolved it.
+  9. The Payment Service commits successfully, but the Order Service fails. How would you maintain consistency?
+  10. When would you choose synchronous REST over asynchronous Kafka communication?
+  11. How would you implement a circuit breaker in Spring Boot?
+8)Spring AI & RAG
+  12. Have you implemented an AI chatbot? Explain its architecture.
+  13. How would you prevent hallucinations in an AI chatbot using RAG?
+9)Payment Processing & Kubernetes
+  14. Your payment API receives 10 duplicate requests simultaneously. How would you prevent duplicate transactions?
+  15. What happens when a Kubernetes pod crashes or a worker node goes down?
+  16. Your service suddenly receives 10x traffic. How would you handle scaling?
+10)Core Java & Coding
+  17. Explain Java Streams. When do Streams introduce unnecessary overhead?
+  18. Given ABCABCBB, find the longest substring without repeating characters. Explain the algorithm, Java implementation, and time complexity.
+11)
+  ✅ Production troubleshooting and failure recovery
+  ✅ Distributed transactions and data consistency
+  ✅ Kafka reliability and consumer scaling
+  ✅ Redis caching and concurrency
+  ✅ Microservices resilience and Kubernetes
+  ✅ Practical Java performance and problem-solving
