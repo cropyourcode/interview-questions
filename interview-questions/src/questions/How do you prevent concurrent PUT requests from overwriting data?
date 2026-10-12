@@ -1,0 +1,30 @@
+Q)How do you prevent concurrent PUT requests from overwriting data?
+Ans:
+
+Consider two clients reading Employee 101 at version 5.
+- Client A changes the department.
+- Client B changes another field using an older representation.
+- Client A saves its changes.
+- Client B sends its stale PUT and might overwrite Client A's update.
+A senior developer should recognize this as a lost-update problem.
+One solution is optimistic concurrency control using an ETag and If-Match:
+GET /api/employees/101
+
+
+Response:
+ETag: "v5"
+
+
+The client sends:
+PUT /api/employees/101
+If-Match: "v5"
+Content-Type: application/json
+
+
+The server updates the resource only if the current version still matches "v5". If another request has changed it, the server can reject the update with 412 Precondition Failed. This follows HTTP conditional-request semantics. 
+
+rfc-editor.org
+
+
+
+In a Spring Boot application, this can be implemented using JPA @Version, ETag generation, and appropriate exception handling. The ETag and database version must be coordinated correctly.
