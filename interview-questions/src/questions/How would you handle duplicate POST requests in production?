@@ -1,0 +1,14 @@
+I would consider an idempotency key:
+POST /api/orders
+Idempotency-Key: 8f4d-1234
+
+A typical implementation would:
+1. Receive the idempotency key from the client.
+2. Store the key and processing result in durable storage.
+3. Enforce uniqueness for the key, scoped appropriately to the client or operation.
+4. If the same request is retried, return the previously stored result instead of creating another order.
+5. Handle concurrent requests using database constraints and transactional processing.
+For payment or event-driven workflows, I would also consider transactional outbox patterns, consumer deduplication, 
+  and downstream idempotency.
+Key point: POST can be designed to be idempotent at the application level, even though HTTP does not define POST as 
+  inherently idempotent.
