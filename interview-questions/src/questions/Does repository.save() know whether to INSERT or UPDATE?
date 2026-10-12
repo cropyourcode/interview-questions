@@ -1,0 +1,31 @@
+Q)Does repository.save() know whether to INSERT or UPDATE?
+This is another important interview question.
+repository.save(employee);
+Spring Data JPA determines whether the entity is new using its entity-state detection strategy, which typically checks a suitable version property or the entity's identifier.
+Situation	Typical behavior
+New entity	persist(); typically results in INSERT
+Existing entity	merge(); may result in UPDATE or other SQL, depending on state
+There is a subtle but important distinction here:
+save() does not inspect whether the HTTP request was POST or PUT. It operates on the entity's persistence state.
+For example, you could call save() from a POST endpoint or a PUT endpoint. The HTTP method does not control the repository's SQL decision.
+Also, merge() does not guarantee that Hibernate will issue exactly one UPDATE statement. Depending on the entity state and database interaction, it may issue a SELECT, an INSERT, or an UPDATE.
+
+REST and HTTP define the meaning of the request, not the database operation.
+
+Q)What if the employee does not exist?
+This is where your REST API design matters.
+For a PUT request to /api/employees/101, you have two valid design choices:
+Option A — Update-only API
+- Employee exists → update it.
+- Employee does not exist → return 404 Not Found.
+Option B — Create-or-replace API
+- Employee exists → replace its representation.
+- Employee does not exist → create it at that URI, if the server allows it.
+For a typical employee-management API, update-only behavior is common.
+
+
+How does Spring know that PUT should perform an update?
+Spring itself does not determine the database operation based on the HTTP method. Spring MVC identifies the PUT request and routes it to the method annotated with @PutMapping. The controller then calls the service layer.
+In a typical Spring Data JPA implementation, the service fetches the existing entity by ID, updates its fields, and operates within a transaction. Hibernate's dirty-checking mechanism detects the changes and generates the SQL UPDATE when the persistence context is flushed.
+If we use JDBC, we explicitly execute an UPDATE statement. Therefore, PUT defines the HTTP semantics, Spring handles request routing, and the application and persistence layers implement the actual database operation.
+
