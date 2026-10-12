@@ -1,0 +1,37 @@
+Q)How PUT is considered by Spring or REST, so that it know that it has to perform update operation?
+Spring does not automatically know that a database update must happen just because the HTTP method is PUT. Spring identifies the HTTP method and routes the request to the 
+appropriate controller method. Your application code, usually the service and repository layers, determines whether to insert, update, or replace data.
+@PutMapping only maps the HTTP request to a Java method. It does not execute an SQL UPDATE statement automatically.
+2. How does the actual database UPDATE happen?
+That depends on how you implement your service and repository.
+Approach A: Spring Data JPA — fetch, modify, and save
+
+@Service
+public class EmployeeService {
+
+    private final EmployeeRepository repository;
+
+    public EmployeeService(EmployeeRepository repository) {
+        this.repository = repository;
+    }
+
+    @Transactional
+    public void update(Long id, EmployeeRequest request) {
+
+        Employee employee = repository.findById(id)
+                .orElseThrow(() ->
+                        new RuntimeException("Employee not found"));
+
+        employee.setName(request.name());
+        employee.setDepartment(request.department());
+
+        repository.save(employee);
+    }
+}
+
+The important JPA concept: Dirty checking
+In this example, findById() loads the employee inside a transaction. The returned entity is managed by the JPA persistence context.
+When you modify its fields, Hibernate tracks those changes. At flush time, it detects the modifications and generates the required SQL.
+In this particular example, repository.save(employee) is not strictly necessary. Because the entity is already managed inside the transaction, dirty checking is sufficient to persist the changes.
+The exact SQL generated depends on your entity mapping and Hibernate configuration.
+
