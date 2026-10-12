@@ -1,0 +1,212 @@
+Q)How is an API key authenticated and authorized in a Spring Boot application?
+
+1. Interview-ready answer
+In a Spring Boot application, an API key is typically used to identify a client application and authenticate its request. The server extracts the key from the HTTP request, validates it against a trusted source, and determines whether the client is allowed to access the requested resource.
+The important distinction is:
+- Authentication: Is this request associated with a valid client?
+- Authorization: What is this client allowed to do?
+An API key does not automatically provide user-level authentication or authorization. For example, a valid key might identify an external application and grant it permission to call only specific APIs.
+A typical implementation involves:
+1. The client sends the API key, commonly in an X-API-Key HTTP header.
+2. A Spring Security filter extracts the key.
+3. The application validates the key against a database, secure configuration, or API gateway.
+4. The application loads the client's identity, permissions, status, and other relevant metadata.
+5. Spring Security creates an authenticated security context with the appropriate authorities.
+6. URL-level or method-level security checks whether the client has permission to execute the requested operation.
+For a senior Java developer interview, explain that API key validation and authorization should be integrated into the security chain rather than implemented as ad hoc checks inside every controller.
+2. How does the flow work?
+1. Client application
+Sends X-API-Key in the request header
+
+2. API key authentication filter
+Extracts and validates the key
+
+3. Client identity and permissions
+Loads client status, roles, and authorities
+
+4. Spring Security authorization
+Checks URL rules or method-level rules
+
+5. Controller and service execute
+
+
+If the key is missing or invalid, the application rejects the request. If the key is valid but lacks the required permission, the application rejects it with 403 Forbidden.
+3. Implementation in Spring Boot
+The following is an illustrative implementation using Spring Boot 3 and Spring Security 6. It uses an in-memory API key for demonstration; a production implementation should retrieve and validate keys through a secure credential store or API key service.
+Step 1: Create an API key authentication filter
+@Component
+public class ApiKeyAuthFilter extends OncePerRequestFilter {
+
+    private static final String API_KEY_HEADER = "X-API-Key";
+
+    private final String expectedApiKey;
+    private final AuthenticationEntryPoint entryPoint;
+
+    public ApiKeyAuthFilter(
+            @Value("${security.api-key}") String expectedApiKey,
+            AuthenticationEntryPoint entryPoint) {
+        this.expectedApiKey = expectedApiKey;
+        this.entryPoint = entryPoint;
+    }
+
+    @Override
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain)
+            throws ServletException, IOException {
+
+        String apiKey = request.getHeader(API_KEY_HEADER);
+
+        if (apiKey == null || apiKey.isBlank()) {
+            entryPoint.commence(
+                request,
+                response,
+                new InsufficientAuthenticationException(
+                    "Missing API key"
+                )
+            );
+            return;
+        }
+
+        if (!MessageDigest.isEqual(
+                expectedApiKey.getBytes(StandardCharsets.UTF_8),
+                apiKey.getBytes(StandardCharsets.UTF_8))) {
+            entryPoint.commence(
+                request,
+                response,
+                new BadCredentialsException("Invalid API key")
+            );
+            return;
+        }
+
+        Authentication authentication =
+            new UsernamePasswordAuthenticationToken(
+                "integration-client",
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_API_CLIENT"))
+            );
+
+        SecurityContextHolder.getContext()
+            .setAuthentication(authentication);
+
+        try {
+            filterChain.doFilter(request, response);
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+}
+
+
+What this code does:
+- Extracts the API key from X-API-Key.
+- Rejects missing or invalid keys.
+- Creates an authenticated Spring Security principal for the integration client.
+- Assigns the ROLE_API_CLIENT authority.
+- Passes the request down the filter chain after successful validation.
+MessageDigest.isEqual() is used for a constant-time comparison of the byte arrays. It does not replace secure key storage, rotation, or other security controls.
+For clarity, this example treats all requests handled by the filter as API-key-protected. A real application should define which paths use API-key authentication and ensure that other authentication mechanisms are not unintentionally bypassed or overwritten.
+Step 2: Configure Spring Security
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            ApiKeyAuthFilter apiKeyAuthFilter) throws Exception {
+
+        http
+            .csrf(csrf -> csrf.disable())
+            .sessionManagement(session -> session
+                .sessionCreationPolicy(
+                    SessionCreationPolicy.STATELESS
+                )
+            )
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/integration/**")
+                    .hasRole("API_CLIENT")
+                .anyRequest().denyAll()
+            )
+            .addFilterBefore(
+                apiKeyAuthFilter,
+                UsernamePasswordAuthenticationFilter.class
+            );
+
+        return http.build();
+    }
+}
+
+
+Important: Disabling CSRF is appropriate only for a stateless API that does not rely on browser-automatically-sent credentials such as session cookies. Review the application's complete security configuration before applying it.
+Step 3: Configure the key
+# Example placeholder only; do not use a real key here
+security.api-key=${INTEGRATION_API_KEY}
+
+
+Supply the actual key through a secret manager or secure deployment configuration. Do not commit real API keys to source control.
+Step 4: Protect the API
+@RestController
+@RequestMapping("/api/integration")
+public class IntegrationController {
+
+    @GetMapping("/status")
+    public String status() {
+        return "Integration client authorized";
+    }
+}
+
+
+Example request:
+GET /api/integration/status HTTP/1.1
+Host: localhost:8080
+X-API-Key: <your-api-key>
+
+
+A valid key authenticates the client and gives it ROLE_API_CLIENT, which allows access to the configured integration endpoint.
+4. Authentication versus authorization
+Scenario	Result
+API key is missing	Request rejected; typically 401 Unauthorized
+API key is invalid	Request rejected; typically 401 Unauthorized
+API key is valid and client has permission	Request allowed
+API key is valid but client lacks permission	403 Forbidden
+API key is expired, revoked, or disabled	Request rejected according to the API's authentication policy
+The exact response depends on the configured authentication entry point and exception handling. A server may intentionally return a generic error to avoid exposing details about key validity.
+5. How would you implement this in a production application?
+For a senior-level interview, explain that the previous example demonstrates the mechanism, but production systems need additional controls.
+- Secure key storage: Never hardcode API keys or commit them to Git. Use a secret manager or a secure credential store.
+- Key lookup and rotation: Associate keys with a client record containing status, expiry, permissions, and rotation metadata.
+- Safe validation: For high-entropy keys, store a cryptographic hash or keyed digest where practical, and compare safely. Never log the raw key.
+- Least privilege: Assign only the authorities required by the client.
+- Rate limiting: Limit requests by client, key, or quota to reduce abuse.
+- Transport security: Require HTTPS.
+- Revocation: Reject disabled or revoked keys promptly.
+- Monitoring: Audit client identity, endpoint, outcome, and correlation ID without logging secrets.
+- Gateway integration: For distributed systems, an API gateway can validate keys and apply quotas centrally, while backend services should still enforce sensitive business permissions where required.
+For user-specific APIs, an API key alone is usually insufficient because it identifies the calling application, not necessarily the individual user. Consider OAuth 2.0/OIDC or another appropriate identity mechanism.
+6. Common interviewer follow-up questions
+Q1. Is an API key authentication or authorization?
+Primarily, it is a credential used to authenticate or identify the calling application. The application then uses the associated client identity and permissions to authorize requests.
+Q2. Can we validate an API key in an interceptor instead of a Spring Security filter?
+Yes, an MVC interceptor can validate keys for selected controller requests. However, a Spring Security filter is generally preferable when authentication must integrate with the security context, authentication failure handling, and authorization rules. An interceptor also runs later in the request lifecycle and does not cover every type of request handled by the security chain.
+Q3. Can an API key have different permissions?
+Yes. For example, one integration client could have read-only permissions and another could have write permissions. Store or retrieve each client's authorities and enforce them using hasAuthority(), hasRole(), or method-level annotations.
+@PreAuthorize("hasAuthority('EMPLOYEE_READ')")
+@GetMapping("/employees")
+public List<Employee> getEmployees() {
+    return employeeService.findAll();
+}
+
+
+The authority must be assigned only after successful validation of the client identity and its permissions.
+Q4. How is an API key different from a JWT token?
+An API key is usually an opaque credential identifying a client; the server validates it against a trusted record or service. A JWT is a token containing claims that can be validated cryptographically, typically using a signature. A JWT may carry identity and authorization claims, but those claims must be trusted and validated correctly. Neither mechanism automatically makes an application secure.
+Q5. What happens if an API key is leaked?
+Someone who obtains the key may impersonate that client until the key is revoked or expires. Mitigations include immediate revocation, rotation, least-privilege permissions, rate limits, usage monitoring, and avoiding secrets in logs or URLs.
+Q6. Should API keys be sent in query parameters?
+No, avoid query parameters because URLs may be captured in access logs, browser history, proxies, and monitoring systems. Prefer a dedicated header such as X-API-Key, always over HTTPS.
+7. Final answer to say in an interview
+“In Spring Boot, I would implement API key authentication through a custom Spring Security filter or an appropriate authentication provider. The client sends the key in a request header, and the server validates it against a secure credential store or API gateway.
+Once validated, I associate the key with a client identity and its permissions, then establish the authenticated security context. Spring Security subsequently applies URL-level rules or method-level annotations to determine whether the client can access the requested resource.
+In production, I would also implement secure key storage, expiry and revocation, rotation, least-privilege permissions, rate limiting, HTTPS, and audit logging. If the API needs to identify individual users rather than just client applications, I would use an appropriate OAuth 2.0/OIDC-based approach instead of relying solely on an API key.”
