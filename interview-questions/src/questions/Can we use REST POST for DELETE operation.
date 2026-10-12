@@ -1,0 +1,34 @@
+In general, No, you should not replace POST with DELETE in a REST API, because each HTTP method has a different semantic purpose.
+1. Difference between POST and DELETE
+Feature	POST	DELETE
+Purpose	Create a resource or submit data for processing	Remove a resource
+Typical use	Create an order, register a user, submit a payment	Delete an order, remove a user
+Request body	Often contains data to create or process	Usually identifies the resource through the URL; a body is generally unnecessary
+Idempotency	Not guaranteed to be idempotent	Defined to be idempotent
+Typical success status	201 Created or 200 OK	204 No Content or 200 OK
+Idempotency means that repeating the same request has the same intended effect on the server as performing it once.
+For example, deleting the same resource repeatedly should leave it deleted, even if the responses differ (204 initially and perhaps 404 afterward).
+2. Can POST ever be replaced with DELETE?
+It depends on what the API is supposed to do.
+Use POST to create or submit data
+POST /api/orders
+Creates an order or initiates an operation.
+
+
+
+Use DELETE to remove data
+DELETE /api/orders/123
+Requests deletion of order 123.
+
+
+
+Do not substitute one for the other just to make an API work
+Using DELETE to create an order, or POST to delete an order without a clear API-design reason, makes the API misleading and less predictable.
+
+
+
+3. What if the interviewer asks whether POST can perform a delete operation?
+A good answer is:
+Technically, a server can implement deletion logic behind a POST endpoint, but that does not make it good REST API design. I would normally use DELETE when the client's intent is to remove a resource. POST may be justified for a command-style operation, a legacy API, or when an intermediary or client cannot support DELETE. The choice should reflect the API contract, security requirements, and intended semantics.
+
+Senior Java developer takeaway: HTTP methods express the intended semantics of an operation, not merely which Java controller method gets executed. Choose the method based on the resource operation, and preserve consistent behavior across the API.
