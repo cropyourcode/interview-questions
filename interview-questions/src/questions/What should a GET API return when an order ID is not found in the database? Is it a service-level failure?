@@ -1,0 +1,357 @@
+1. Interview-ready answer
+If a GET REST API fetches order details by order ID and the order does not exist in the database, the API should generally return 404 Not Found.
+This is normally not a service-level failure. It is a valid business outcome: the request was processed successfully, but the requested resource does not exist.
+For example:
+GET /api/orders/12345
+
+
+If order 12345 does not exist, the API should respond:
+HTTP/1.1 404 Not Found
+Content-Type: application/json
+
+
+{
+  "status": 404,
+  "error": "Not Found",
+  "message": "Order not found for ID: 12345"
+}
+
+
+The distinction is:
+- Resource not found: 404 Not Found — the order does not exist.
+- Unexpected application failure: 500 Internal Server Error — an unhandled exception or unexpected failure occurred.
+- Database unavailable: typically 503 Service Unavailable if the application knows the service is temporarily unavailable and maps the failure appropriately; otherwise, the result depends on the exception-handling strategy.
+From a senior Java developer perspective, I would handle the missing order explicitly in the service layer, propagate a meaningful exception, and map it to an appropriate HTTP status using centralized exception handling.
+2. How to implement this in Spring Boot
+Let's implement the API using Spring Boot, Spring Data JPA, and @RestControllerAdvice.
+Step 1: Repository layer
+Spring Data JPA provides findById(), which returns an Optional.
+@Repository
+public interface OrderRepository
+        extends JpaRepository<Order, Long> {
+}
+
+
+When the order ID does not exist, findById(orderId) returns Optional.empty() rather than throwing an exception.
+Step 2: Service layer
+The service determines what the absence of the order means for the application's business operation.
+@Service
+public class OrderService {
+
+    private final OrderRepository orderRepository;
+
+    public OrderService(OrderRepository orderRepository) {
+        this.orderRepository = orderRepository;
+    }
+
+    public Order getOrderById(Long orderId) {
+        return orderRepository.findById(orderId)
+            .orElseThrow(() ->
+                new OrderNotFoundException(
+                    "Order not found for ID: " + orderId
+                )
+            );
+    }
+}
+
+
+Define a custom exception:
+public class OrderNotFoundException
+        extends RuntimeException {
+
+    public OrderNotFoundException(String message) {
+        super(message);
+    }
+}
+
+
+Why throw a custom exception?
+- It represents a known business condition.
+- It separates the business logic from HTTP response formatting.
+- It allows centralized exception handling.
+- It avoids incorrectly treating a missing record as a database or infrastructure failure.
+The service layer does not necessarily need to know about HTTP status codes. It can communicate the missing resource through a domain-specific exception.
+Step 3: Controller layer
+@RestController
+@RequestMapping("/api/orders")
+public class OrderController {
+
+    private final OrderService orderService;
+
+    public OrderController(OrderService orderService) {
+        this.orderService = orderService;
+    }
+
+    @GetMapping("/{orderId}")
+    public ResponseEntity<Order> getOrderById(
+            @PathVariable Long orderId) {
+
+        Order order = orderService.getOrderById(orderId);
+        return ResponseEntity.ok(order);
+    }
+}
+
+
+If the order exists, the controller returns 200 OK. If the service throws OrderNotFoundException, the exception is handled centrally.
+Step 4: Global exception handler
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(OrderNotFoundException.class)
+    public ResponseEntity<ProblemDetail> handleOrderNotFound(
+            OrderNotFoundException ex) {
+
+        ProblemDetail problem =
+            ProblemDetail.forStatusAndDetail(
+                HttpStatus.NOT_FOUND,
+                ex.getMessage()
+            );
+
+        problem.setTitle("Order Not Found");
+
+        return ResponseEntity
+            .status(HttpStatus.NOT_FOUND)
+            .body(problem);
+    }
+}
+
+
+Spring Boot's ProblemDetail supports a standardized error response. The response will contain a 404 Not Found status and a meaningful detail message.
+3. Is it a service-level failure?
+No, not necessarily. It is important to distinguish the layer where a condition is detected from whether the operation has failed.
+Scenario 1: Order ID does not exist
+Expected outcome
+The repository returns Optional.empty(). The service raises a meaningful not-found exception, and the API returns 404 Not Found. This is not an unexpected service failure.
+
+
+
+Scenario 2: Database connection fails
+Infrastructure failure
+The repository cannot complete the query because the database is unavailable. This is a genuine dependency failure, not a missing order. Map it to an appropriate server-side error response, commonly 503 when temporary unavailability is established.
+
+
+
+Scenario 3: Unexpected exception in the service
+Application failure
+A null dereference, unexpected mapping error, or other unhandled defect may result in 500 Internal Server Error. Log diagnostic details internally without exposing stack traces to clients.
+
+
+
+There is a subtle but useful interview distinction: the service method may throw an exception, but an exception does not automatically mean an operational failure. A known not-found exception is part of normal application control flow when the resource is absent.
+4. What HTTP status should we return?
+Scenario	HTTP status	Reason
+Order exists	200 OK	Resource returned successfully
+Order ID does not exist	404 Not Found	Requested resource is absent
+Order ID has invalid format	400 Bad Request	Request parameter is invalid
+User is unauthenticated	401 Unauthorized	Authentication is required or failed
+User cannot access the order	403 Forbidden or policy-appropriate 404	Authorization failed or resource existence is intentionally concealed
+Database temporarily unavailable	503 Service Unavailable when appropriately classified	Required dependency is unavailable
+Unexpected application exception	500 Internal Server Error	Unanticipated server-side failure
+A 404 response is appropriate for an absent order, but authorization must be considered separately. In some systems, returning 404 instead of 403 prevents unauthorized callers from discovering whether another customer's order exists.
+5. Common interviewer follow-up questions
+Q1. Why not return 200 OK with an empty response when the order is missing?
+Because 200 OK generally means the requested operation succeeded and its response represents the requested result. If a specific resource does not exist, 404 Not Found communicates that outcome clearly. An empty collection can be valid for a collection endpoint, such as GET /api/orders?customerId=123, when no orders match the query.
+Q2. Should we throw RuntimeException or a custom exception?
+A custom exception such as OrderNotFoundException is clearer because it communicates the exact condition and can be mapped to 404. A generic RuntimeException may be handled as an unexpected error and incorrectly produce 500.
+Q3. Should the repository throw an exception if the order is missing?
+Not when using findById(), which returns an Optional. The service can decide how to handle Optional.empty(). If a repository method itself throws an exception, its semantics should be understood and handled appropriately.
+Q4. Should we handle the exception in the controller or globally?
+For a production application with multiple endpoints, @RestControllerAdvice is usually preferable for consistent error responses. A controller can handle an exception locally when an endpoint genuinely needs different behavior.
+Q5. Is a missing order a functional failure or a technical failure?
+It is typically a functional or business-level outcome, not a technical failure. However, whether it counts as a failed business operation depends on the use case. For example, an API that must retrieve an order for a workflow cannot complete that workflow without it, even though the database and service are functioning correctly.
+Q6. What if the order exists but belongs to a different customer?
+The API must enforce object-level authorization. It should not return the order simply because the ID exists. Depending on the security policy, the API can return 403 Forbidden or deliberately return 404 Not Found to conceal the resource's existence.
+6. Final answer to say in an interview
+“If a GET API fetches order details by order ID and the order does not exist, I would return 404 Not Found. This is generally not a service-level technical failure; it is an expected business outcome.
+In the repository layer, findById() returns an empty Optional when no record exists. In the service layer, I would convert that condition into a meaningful custom exception, such as OrderNotFoundException. Then I would use @RestControllerAdvice to map that exception to a consistent 404 response.
+I would handle database connectivity issues and unexpected exceptions separately, returning appropriate server-side error codes instead of treating every exception as an order-not-found condition. This separation improves API semantics, maintainability, and observability.”
+
+
+----
+Q)Why should we return 404 Not Found for a missing order instead of 200 OK with an empty response?
+The key difference is between fetching a specific resource and searching for a collection of resources.
+- When you request a specific order by its ID, you expect that particular resource to exist. If it does not, return 404 Not Found.
+- When you search for orders matching some criteria, finding zero matching orders is a valid result. Return 200 OK with an empty collection.
+Let's understand this with practical Spring Boot examples.
+1. Scenario A: Fetching a specific order by ID
+Suppose your database contains these orders:
+Order ID	Customer	Amount
+101	Customer A	₹1,000
+102	Customer B	₹2,500
+103	Customer A	₹1,500
+Your API is:
+GET /api/orders/101
+
+
+The client is asking for one specific resource: order 101.
+Because order 101 exists, return 200 OK with the order details.
+{
+  "orderId": 101,
+  "customer": "Customer A",
+  "amount": 1000
+}
+
+
+Now consider:
+GET /api/orders/999
+
+
+Order 999 does not exist.
+The correct response is generally:
+HTTP/1.1 404 Not Found
+Content-Type: application/problem+json
+
+
+{
+  "status": 404,
+  "title": "Order Not Found",
+  "detail": "Order not found for ID: 999"
+}
+
+
+Why not return 200 OK with an empty body?
+Imagine a frontend application that displays order details:
+const response = await fetch("/api/orders/999");
+
+
+If the server returns 200 OK with an empty body, the frontend may assume the request succeeded and attempt to render order properties that do not exist.
+The frontend then needs extra logic to distinguish a successful response with no data from a missing resource.
+With 404, the response itself clearly communicates that the requested order was not found.
+Interview point: The HTTP status code should describe the outcome of the request, not merely whether the server was able to process the request without crashing.
+2. Scenario B: Fetching a collection of orders
+Now suppose the API searches for all orders belonging to Customer C.
+GET /api/orders?customerId=300
+
+
+Assume Customer C currently has no orders.
+The request is asking:
+Give me the collection of orders matching customerId=300.
+
+The collection can validly contain zero orders. The API endpoint exists, the query is valid, and the search completed successfully.
+Therefore, return:
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+
+[]
+
+
+This means:
+- The API executed successfully.
+- The search criteria were valid.
+- No records matched the criteria.
+- The result is an empty collection, not a missing collection resource.
+You generally should not return 404 just because a collection query returns no rows.
+3. Compare the two cases
+Single resource
+GET /api/orders/999
+Question: Does order 999 exist?
+404
+Not Found
+
+
+
+Collection query
+GET /api/orders?customerId=300
+Question: Which orders match customer 300?
+200
+OK, with []
+
+
+
+The important distinction is the resource being requested, not simply whether the database returned any rows.
+4. How to implement both cases in Spring Boot
+A. GET a single order
+Repository:
+public interface OrderRepository
+        extends JpaRepository<Order, Long> {
+}
+
+
+Service:
+@Service
+public class OrderService {
+
+    private final OrderRepository repository;
+
+    public OrderService(OrderRepository repository) {
+        this.repository = repository;
+    }
+
+    public Order getOrderById(Long orderId) {
+        return repository.findById(orderId)
+            .orElseThrow(() ->
+                new OrderNotFoundException(
+                    "Order not found: " + orderId
+                )
+            );
+    }
+}
+
+
+Controller:
+@GetMapping("/{orderId}")
+public ResponseEntity<Order> getOrder(
+        @PathVariable Long orderId) {
+
+    return ResponseEntity.ok(
+        orderService.getOrderById(orderId)
+    );
+}
+
+
+Your global exception handler maps OrderNotFoundException to 404 Not Found.
+B. GET orders by customer ID
+Repository:
+public interface OrderRepository
+        extends JpaRepository<Order, Long> {
+
+    List<Order> findByCustomerId(Long customerId);
+}
+
+
+Service:
+public List<Order> getOrdersByCustomerId(
+        Long customerId) {
+
+    return repository.findByCustomerId(customerId);
+}
+
+
+Controller:
+@GetMapping
+public ResponseEntity<List<Order>> getOrders(
+        @RequestParam Long customerId) {
+
+    return ResponseEntity.ok(
+        orderService.getOrdersByCustomerId(customerId)
+    );
+}
+
+
+If there are no matching orders, Spring serializes the empty list as [], and the API returns 200 OK.
+One subtlety: if customerId is invalid, or the API requires the customer record itself to exist, you may need separate validation or resource-existence checks. An empty order list does not automatically mean the customer exists or does not exist.
+5. What if the response body is empty versus an empty array?
+These are different API responses.
+Response	Meaning	Typical use
+200 OK with an order object	The requested resource was found	GET /api/orders/101
+200 OK with []	A collection query succeeded with no matches	GET /api/orders?customerId=300
+200 OK with an empty body	The request succeeded, but no representation was returned; often ambiguous for a GET	Usually avoid for a missing resource
+404 Not Found	The requested resource was not found	GET /api/orders/999
+204 No Content	The request succeeded and there is intentionally no response content	More common for operations such as a successful DELETE
+A 204 No Content response is not a better substitute for 404 when a requested order does not exist. It communicates success without a body, rather than absence of the requested resource.
+6. A senior-level interview nuance
+There is one more distinction worth mentioning.
+Consider these two requests:
+GET /api/orders?customerId=300
+GET /api/customers/300/orders
+
+
+The first is a collection search. Returning 200 OK with [] when no orders match is normal.
+The second represents the orders subresource of customer 300. If customer 300 does not exist, the API design may return 404 Not Found, because the parent customer resource is missing. If the customer exists but has no orders, 200 OK with [] is appropriate.
+So, the correct response depends on the API's resource model and contract, not just on the number of rows returned by SQL.
+7. Final answer to say in an interview
+“I distinguish between retrieving a single resource and retrieving a collection.
+For GET /api/orders/{orderId}, the client requests a specific order. If that order does not exist, I return 404 Not Found, because the requested resource is absent.
+For GET /api/orders?customerId=123, the client requests a collection of orders matching a filter. If no orders match, that is a valid search result, so I return 200 OK with an empty array.
+Returning 200 OK with an empty body for a missing individual resource can make it difficult for clients to distinguish between a successful retrieval and a resource that does not exist. Clear HTTP semantics make APIs easier to consume, test, and maintain.”
