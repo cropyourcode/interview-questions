@@ -1,0 +1,56 @@
+POST VS PUT in REST interview question asked?
+How PUT is considered by Spring or REST, so that it know that it has to perform update operation.
+Ans:
+POST creates a resource and PUT updates a resource.
+You should explain HTTP semantics, idempotency, partial vs. full updates, REST API design, Spring Boot implementation, 
+  and real-world scenarios.
+POST is generally used to create a resource or ask the server to process a request. 
+PUT is generally used to create or replace a resource at a known URI.
+
+Feature	        POST	                              PUT
+Primary purpose	Create or process a resource	      Create or replace a resource at a known URI
+Resource        URI	Often selected by server	      Selected by client
+Idempotent?	    Not inherently	                    Yes, by HTTP semantics
+Repeating the 
+same request	  May create duplicate resources 
+                or repeat processing	              Should have the same intended effect on resource state
+Full vs. 
+partial update	Can perform either, 
+                depending on API contract	          Generally represents replacement, not a partial update
+Typical 
+response	      201 Created, 200 OK, 
+                or 202 Accepted	                    200 OK,204 No Content, or 201 Created if created
+Typical 
+example	        POST /employees	                    PUT /employees/101
+
+
+200 OK
+201 Created
+202 Accepted
+204 No Content
+
+PUT - Idempotent
+DELETE - Idempotent
+GET - Idempotent
+POST - Not Idempotent
+PATCH - Not Idempotent
+
+Idempotency means that making the same request multiple times has the same intended effect on the server's resource state as 
+
+PUT /api/employees/101
+{
+  "name": "Prakash",
+  "department": "Platform Engineering",
+  "salary": 1500000
+}
+
+PATCH /api/employees/101
+Content-Type: application/merge-patch+json
+{
+  "department": "Platform Engineering"
+}
+
+
+
+
+
