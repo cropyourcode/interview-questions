@@ -1,0 +1,200 @@
+Interview scenario: You are developing a Spring Boot REST API to create a ProductPerfume record. The request JSON contains the perfume's pH level.
+- If pH > 10, the application should save the perfume in the database.
+- If pH <= 10, the request should be rejected, and no database entry should be created.
+The interviewer asks: Is this an application-level failure or a service-level failure?
+Q1. What is the correct answer?
+Answer: This is primarily a business validation failure, which is handled at the application level through the service layer. Depending on the API design, it can be returned to the client as an HTTP 400 Bad Request response.
+The important distinction is that application-level failure and service-level failure are not mutually exclusive categories. They describe different aspects of the problem.
+- Business validation failure: The request violates a business rule because the pH level is not greater than 10.
+- Service layer: The service layer should enforce this business rule before saving the entity.
+- HTTP/API failure: The controller or global exception handler translates the validation exception into an appropriate HTTP response.
+- Database failure: This is not a database failure, because the database should never be called for an invalid pH value.
+For a senior Java developer interview, emphasize that the business rule belongs in the service layer, and the invalid request should not reach the persistence operation.
+Q2. Why should the validation be in the service layer rather than only in the controller?
+Answer: The controller is responsible primarily for handling HTTP requests and responses. The service layer owns business logic and enforces business rules.
+Consider two scenarios:
+1. A REST controller calls PerfumeService.createPerfume().
+2. Another component, such as a scheduled job or a message consumer, calls the same service method.
+If the validation exists only in the controller, the second caller could bypass the rule and save an invalid record. Keeping the rule in the service layer ensures that all callers follow the same business requirement.
+The controller may also perform request-format validation, such as checking whether the JSON contains a numeric pH value.
+Q3. How would you implement this requirement in Spring Boot?
+Answer: I would use a DTO for the incoming request, a service layer for business validation, a repository for persistence, and a global exception handler to return a consistent error response.
+1. Request JSON
+{
+  "name": "Rose Perfume",
+  "brand": "ABC",
+  "phLevel": 11.5
+}
+
+
+If phLevel is 10.0 or less, the request must be rejected.
+2. Request DTO
+import java.math.BigDecimal;
+
+public record PerfumeRequest(
+        String name,
+        String brand,
+        BigDecimal phLevel
+) {
+}
+
+
+A Java record is a good fit for a simple immutable request DTO in modern Java.
+3. Service layer — enforce the business rule
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+
+@Service
+public class PerfumeService {
+
+    private final PerfumeRepository perfumeRepository;
+
+    public PerfumeService(PerfumeRepository perfumeRepository) {
+        this.perfumeRepository = perfumeRepository;
+    }
+
+    @Transactional
+    public Perfume createPerfume(PerfumeRequest request) {
+
+        if (request.phLevel() == null ||
+                request.phLevel().compareTo(BigDecimal.TEN) <= 0) {
+            throw new InvalidPerfumeException(
+                    "Perfume pH level must be greater than 10"
+            );
+        }
+
+        Perfume perfume = new Perfume();
+        perfume.setName(request.name());
+        perfume.setBrand(request.brand());
+        perfume.setPhLevel(request.phLevel());
+
+        return perfumeRepository.save(perfume);
+    }
+}
+
+
+The important condition is:
+request.phLevel().compareTo(BigDecimal.TEN) <= 0
+
+
+This rejects values less than or equal to 10. Using BigDecimal avoids floating-point comparison issues for decimal values.
+4. Custom business exception
+public class InvalidPerfumeException
+        extends RuntimeException {
+
+    public InvalidPerfumeException(String message) {
+        super(message);
+    }
+}
+
+
+5. Controller layer
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/perfumes")
+public class PerfumeController {
+
+    private final PerfumeService perfumeService;
+
+    public PerfumeController(PerfumeService perfumeService) {
+        this.perfumeService = perfumeService;
+    }
+
+    @PostMapping
+    public ResponseEntity<Perfume> createPerfume(
+            @RequestBody PerfumeRequest request) {
+
+        Perfume perfume = perfumeService.createPerfume(request);
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(perfume);
+    }
+}
+
+
+6. Global exception handler
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
+import org.springframework.web.bind.annotation.*;
+
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(InvalidPerfumeException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ProblemDetail handleInvalidPerfume(
+            InvalidPerfumeException exception) {
+
+        return ProblemDetail.forStatusAndDetail(
+                HttpStatus.BAD_REQUEST,
+                exception.getMessage()
+        );
+    }
+}
+
+
+This uses Spring's ProblemDetail support to return a structured error response.
+Q4. What happens when the client sends different pH values?
+Request pH	Service behavior	Database operation	HTTP response
+11.5	Validation passes	Save perfume	201 Created
+10.0	Business validation fails	No save	400 Bad Request
+9.5	Business validation fails	No save	400 Bad Request
+null	Business validation fails	No save	400 Bad Request
+Assuming the other request fields are valid, the service rejects invalid values before calling the repository. For a null or nonnumeric JSON field, you may also choose to reject the request earlier through DTO validation or JSON deserialization.
+Q5. Is this an application-level error, a client error, or a server error?
+Answer: These terms refer to different classifications.
+Classification	Meaning in this scenario
+Business/application validation failure	The perfume violates the pH business rule
+Service-layer failure	The service detects the invalid value and throws an exception
+Client error — HTTP 400	The server communicates that the request is invalid
+Server error — HTTP 500	Generally inappropriate for this expected validation failure
+Database error	Not applicable because persistence is never attempted
+A useful interview distinction: the service throwing an exception does not automatically mean the failure is a server-side 500. The exception handler determines how the failure is exposed through HTTP.
+Q6. Could we validate the pH level in the DTO using Bean Validation?
+Answer: Yes. Spring Boot supports Jakarta Bean Validation, which is useful for validating incoming request data.
+For example:
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotNull;
+
+import java.math.BigDecimal;
+
+public record PerfumeRequest(
+        String name,
+        String brand,
+
+        @NotNull(message = "pH level is required")
+        @DecimalMin(
+                value = "10.0",
+                inclusive = false,
+                message = "pH level must be greater than 10"
+        )
+        BigDecimal phLevel
+) {
+}
+
+
+Then enable validation in the controller:
+@PostMapping
+public ResponseEntity<Perfume> createPerfume(
+        @jakarta.validation.Valid
+        @RequestBody PerfumeRequest request) {
+
+    Perfume perfume = perfumeService.createPerfume(request);
+
+    return ResponseEntity.status(HttpStatus.CREATED)
+            .body(perfume);
+}
+
+
+With @Valid, invalid request data is normally rejected before the controller invokes the service. Spring handles the resulting validation exception through its exception-resolution mechanism.
+Senior-level consideration: If the pH requirement is a business invariant that must hold for every caller, retain the service-layer validation even when DTO validation is also used. This gives you both early request validation and protection against other service callers.
+Q7. How would you explain your design to the interviewer in 30 seconds?
+I would classify this as a business validation failure. The pH requirement is a business rule, so I would enforce it in the service layer before calling the repository. If the pH is greater than 10, I would persist the perfume and return HTTP 201 Created. Otherwise, I would throw a custom business exception and handle it through @RestControllerAdvice, returning HTTP 400 Bad Request. No database insert should occur for an invalid request. I could also use Bean Validation in the request DTO for early validation, but I would keep the service-layer check if this rule must be enforced for every caller.
+
+
