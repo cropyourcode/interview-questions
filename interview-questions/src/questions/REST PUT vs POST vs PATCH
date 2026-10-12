@@ -80,5 +80,8 @@ Can PUT and POST both use the same URI?
 Yes. For example, POST /employees can create a new employee in a collection, while PUT /employees/101 targets a 
 specific employee. HTTP method semantics distinguish their operations.
 
+Why is PUT idempotent?
+How can POST retries create duplicate orders or payments, and how you prevent lost updates in a distributed Spring Boot application?
+
 
 
