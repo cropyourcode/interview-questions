@@ -1,0 +1,280 @@
+Q) How would you implement role-based authorization in a Spring Boot REST API so that GET endpoints are accessible 
+only to end users, while POST endpoints are accessible only to administrators?
+Assumption: Both endpoints belong to the same controller, users are authenticated, and their roles are available 
+through Spring Security.
+
+Q1. How would you implement this in Spring Boot?
+Answer:
+I would use Spring Security with role-based access control (RBAC). Authentication verifies who the user is, while authorization determines what the user is permitted to do.
+For this requirement, I would assign roles such as USER and ADMIN and enforce the authorization rules at the HTTP endpoint or method level.
+There are two common approaches:
+1. Configure authorization using SecurityFilterChain and HTTP request matchers.
+2. Use method-level security with @PreAuthorize.
+For a senior-level application, I would choose based on whether the authorization rules are simple and centralized or need to be enforced close to individual business operations. I would also ensure that authentication is validated before either endpoint is executed.
+Q2. Can you show the implementation using Spring Security?
+Answer:
+Yes. In a Spring Boot 3.x application using Spring Security 6, I can configure authorization based on both the HTTP method and the endpoint URL.
+Step 1: Configure the security rules
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http) throws Exception {
+
+        http
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers(
+                    HttpMethod.GET, "/api/employees/**"
+                ).hasRole("USER")
+
+                .requestMatchers(
+                    HttpMethod.POST, "/api/employees/**"
+                ).hasRole("ADMIN")
+
+                .anyRequest().denyAll()
+            )
+            .httpBasic(Customizer.withDefaults());
+
+        return http.build();
+    }
+}
+
+
+This is an illustrative configuration for HTTP Basic authentication. In production, I would normally use the application's approved authentication mechanism, such as OAuth 2.0 Resource Server with JWTs, and configure CSRF appropriately for the chosen authentication model.
+Step 2: Create the controller
+@RestController
+@RequestMapping("/api/employees")
+public class EmployeeController {
+
+    @GetMapping
+    public ResponseEntity<String> getEmployees() {
+        return ResponseEntity.ok("Employee list");
+    }
+
+    @PostMapping
+    public ResponseEntity<String> createEmployee() {
+        return ResponseEntity.ok("Employee created");
+    }
+}
+
+
+No authorization logic is needed inside the controller because Spring Security enforces the configured rules before the request reaches it.
+Step 3: Understand the behavior
+Authenticated role	GET /api/employees	POST /api/employees
+ROLE_USER	Allowed	403 Forbidden
+ROLE_ADMIN	403 Forbidden	Allowed
+No valid authentication	401 Unauthorized	401 Unauthorized
+The exact response for unauthenticated requests depends on the configured authentication entry point.
+Important: hasRole("USER") automatically checks for the authority ROLE_USER. If the authenticated principal instead contains USER without the prefix, the rule will not match unless the authority mapping or expression is adjusted.
+Also, .anyRequest().denyAll() is a secure default for an API where only the listed requests should be accessible. In a larger application, I would explicitly configure the policies for all intended endpoints.
+
+Q3. Can we achieve the same using @PreAuthorize?
+Answer:
+Yes. I can use method-level security to keep authorization rules close to the controller methods or, preferably for important business operations, the service methods.
+Step 1: Enable method-level security
+@Configuration
+@EnableMethodSecurity
+public class MethodSecurityConfig {
+}
+
+
+Step 2: Apply role restrictions
+@RestController
+@RequestMapping("/api/employees")
+public class EmployeeController {
+
+    @GetMapping
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<String> getEmployees() {
+        return ResponseEntity.ok("Employee list");
+    }
+
+    @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<String> createEmployee() {
+        return ResponseEntity.ok("Employee created");
+    }
+}
+
+
+Spring Security evaluates the @PreAuthorize expressions before invoking the protected methods, provided method security is enabled and the methods are invoked through the Spring security proxy.
+Which approach would I choose?
+Consideration	HTTP request matchers	@PreAuthorize
+Authorization based on URL and HTTP method	Excellent	Supported indirectly through method placement
+Centralized security rules	Excellent	Rules distributed across methods
+Business-level authorization	Limited by URL-level context	Excellent
+Complex permission checks	Can become cumbersome	Supports expressions and custom authorization beans
+Best use	Broad endpoint access policies	Fine-grained method and business authorization
+For a real project, I often combine both: request matchers provide a centralized security baseline, while method-level security protects sensitive business operations.
+Q4. What if the roles come from a JWT token?
+Answer:
+In a microservices architecture, the client may send a JWT issued by an identity provider. I would configure Spring Security as an OAuth 2.0 Resource Server to validate the token's signature, issuer, expiration, and other required claims.
+I would then map the token's role or scope claims to Spring Security authorities.
+For example, if the JWT contains:
+{
+  "sub": "user123",
+  "roles": ["USER"]
+}
+
+
+I would ensure that the application's JWT authority converter maps the roles claim correctly to ROLE_USER (or use a matching authority expression).
+I would not trust a role supplied directly by the client in a request parameter or request body. The authorization decision must use trusted, validated identity information.
+Q5. What if an ADMIN should also be allowed to perform GET requests?
+Answer:
+I would clarify the business rule first.
+If administrators should be allowed to perform both GET and POST operations, I would configure GET as:
+.requestMatchers(HttpMethod.GET, "/api/employees/**")
+.hasAnyRole("USER", "ADMIN")
+
+
+And POST as:
+.requestMatchers(HttpMethod.POST, "/api/employees/**")
+.hasRole("ADMIN")
+
+
+This demonstrates an important design principle: authorization policies should explicitly represent the business requirement rather than relying on assumptions about role inheritance.
+Q6. What security considerations would you mention as a senior developer?
+Answer:
+I would highlight the following:
+- Least privilege: Grant each role only the permissions it needs.
+- Authentication vs. authorization: Authentication establishes identity; authorization checks permissions.
+- Default-deny policy: Unmatched sensitive endpoints should not accidentally become public.
+- HTTP status codes: Use 401 Unauthorized for missing or invalid authentication and 403 Forbidden when an authenticated principal lacks permission.
+- Service-layer protection: Protect sensitive business operations even if they can be invoked through other controllers or entry points.
+- Object-level authorization: Role checks alone may not prevent a user from accessing another user's records. Validate ownership and tenant boundaries where applicable.
+- Testing: Test allowed and denied requests for each role, including unauthenticated requests and unexpected HTTP methods.
+- CSRF and token security: Configure CSRF based on whether authentication uses browser-managed cookies or stateless bearer tokens.
+
+
+Follow Up
+Q)What is the difference between URL-level security and method-level security in Spring Boot?
+1. Interview-ready answer
+In Spring Security, URL-level security controls access based on the HTTP request path and HTTP method, whereas method-level security controls access based on the Java method being invoked.
+- URL-level security is configured using authorizeHttpRequests() and request matchers in SecurityFilterChain.
+- Method-level security is configured using annotations such as @PreAuthorize, @PostAuthorize, and @Secured on service or controller methods.
+In real-world applications, I prefer using URL-level security for broad API access rules and method-level security for fine-grained business authorization. Both can be combined to implement defense in depth.
+2. Code examples
+A. URL-level security
+Example: Only users with the USER role can access GET APIs, and only administrators can access POST APIs.
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http) throws Exception {
+
+        http.authorizeHttpRequests(auth -> auth
+            .requestMatchers(
+                HttpMethod.GET, "/api/employees/**"
+            ).hasRole("USER")
+
+            .requestMatchers(
+                HttpMethod.POST, "/api/employees/**"
+            ).hasRole("ADMIN")
+
+            .anyRequest().denyAll()
+        );
+
+        return http.build();
+    }
+}
+
+
+How it works:
+- Spring Security checks the HTTP method and URL before the request reaches the controller.
+- A user without the required role receives 403 Forbidden if authenticated but unauthorized.
+- Rules are centralized and easy to review.
+- However, URL rules alone may not enforce business-specific permissions, such as whether a user can access a particular employee record.
+B. Method-level security
+Example: Only administrators can delete an employee, while a user can view an employee record only if business rules permit it.
+First, enable method security:
+@Configuration
+@EnableMethodSecurity
+public class MethodSecurityConfig {
+}
+
+
+Then apply authorization to service methods:
+@Service
+public class EmployeeService {
+
+    @PreAuthorize("hasRole('ADMIN')")
+    public void deleteEmployee(Long employeeId) {
+        // Delete employee
+    }
+
+    @PreAuthorize(
+        "hasRole('USER') and #employeeId == authentication.principal.employeeId"
+    )
+    public Employee getEmployee(Long employeeId) {
+        // Fetch employee
+        return employeeRepository.findById(employeeId)
+            .orElseThrow();
+    }
+}
+
+
+The second expression is illustrative: it assumes the authenticated principal exposes an employeeId property. In a real application, the expression must match the principal structure and the business authorization model.
+How it works:
+- Spring Security checks the authorization rule when the secured method is invoked through the Spring proxy.
+- Rules can use roles, authorities, method parameters, and authentication details.
+- Service-level security can protect business operations even when they are called through different controllers.
+- Method security must be configured correctly; self-invocation within the same bean can bypass proxy-based interception.
+3. Key differences
+Feature	URL-level security	Method-level security
+Applied at	HTTP request layer	Java method layer
+Configuration	SecurityFilterChain	@PreAuthorize, @PostAuthorize, @Secured
+Checks	URL, HTTP method, request matchers	Roles, authorities, parameters, business conditions
+Main purpose	Broad API access control	Fine-grained authorization
+Controller-independent protection	No, not by itself	Yes, when secured service methods are invoked through the security proxy
+Example	Only admins can call POST /api/employees	Only an employee's manager can approve a request
+Maintenance	Centralized endpoint rules	Authorization close to business logic
+4. Can we use both together?
+Yes. This is generally a good approach for sensitive applications.
+For example:
+Incoming HTTP request
+POST /api/employees/123/approve
+
+
+URL-level security
+Is the caller an authenticated administrator?
+
+
+Controller → Service
+
+
+Method-level security
+Is this caller authorized to approve this specific employee's request?
+
+
+Execute business operation
+
+
+The URL rule checks broad access; the service method checks the specific business permission. Both checks must pass.
+5. Common interviewer follow-up questions
+Q1. Is method-level security a replacement for URL-level security?
+No. They solve related but different problems. URL-level security controls access to API endpoints, while method-level security protects specific operations and business rules. Combining them is often appropriate.
+Q2. Which is better: @PreAuthorize or hasRole() in SecurityFilterChain?
+Neither is universally better. Use request matchers for endpoint-level rules and @PreAuthorize for method-level or business-specific rules.
+Q3. Does @PreAuthorize work automatically?
+Not unless method security is enabled using @EnableMethodSecurity. Also, proxy-based security can be bypassed by self-invocation, such as one method calling another secured method within the same bean.
+Q4. Can method-level security check method parameters?
+Yes. For example:
+@PreAuthorize("#userId == authentication.principal.id")
+public User getUser(Long userId) {
+    // Fetch user
+}
+
+
+This assumes the authenticated principal exposes an id property. For complex ownership or tenant checks, use a dedicated authorization service or permission evaluator.
+Q5. What is the difference between @PreAuthorize and @PostAuthorize?
+- @PreAuthorize checks access before the method executes.
+- @PostAuthorize checks access after the method returns, allowing a rule to inspect the returned object.
+Use @PreAuthorize for most access checks. Be careful with @PostAuthorize on operations that change data, because the operation may already have executed before authorization is rejected.
+6. Final answer to say in an interview
+“URL-level security in Spring Security is configured through SecurityFilterChain and request matchers. It controls access based on URL patterns and HTTP methods before the request reaches the controller. Method-level security uses annotations such as @PreAuthorize to enforce authorization on individual Java methods, including business-specific conditions.
+For example, I can restrict POST employee APIs to administrators using URL-level security, then use @PreAuthorize on a service method to verify whether the caller is allowed to modify a particular employee's data.
+In a production Spring Boot application, I generally combine both approaches: URL-level rules for broad API access, method-level rules for fine-grained business authorization, and a deny-by-default policy wherever practical.”
