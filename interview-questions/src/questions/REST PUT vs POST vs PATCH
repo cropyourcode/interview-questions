@@ -50,7 +50,35 @@ Content-Type: application/merge-patch+json
   "department": "Platform Engineering"
 }
 
+Follow up Questions:
+Can PUT create a resource?
+Yes. If the client knows the resource URI and the server permits creation at that URI, 
+PUT can create it. A successful creation normally returns 201 Created.
 
+Is POST always non-idempotent?
+POST is not inherently idempotent according to HTTP semantics, but an API can implement deduplication or 
+idempotency keys to make retries safe for a particular operation.
+
+Can we use POST to update a resource?
+Yes. POST means process the submitted representation according to the target resource’s semantics, 
+so it can update or trigger actions. However, use PUT or PATCH when their standardized replacement or 
+partial-update semantics match the intended operation.
+
+Is PUT safe?
+No. Safe means the request is essentially read-only with respect to the requested resource operation. 
+PUT changes resource state, although it is idempotent.
+
+Which HTTP status codes should I return?
+POST creation: commonly 201 Created with Location. Asynchronous processing: often 202 Accepted. 
+PUT creation: 201 Created. Successful PUT update: 200 OK with a representation or 204 No Content without one.
+
+What if a field is missing in a PUT request?
+The API should follow its replacement contract. Do not silently treat missing fields as unchanged unless your 
+API explicitly defines that behavior. Use PATCH for partial modification when appropriate.
+
+Can PUT and POST both use the same URI?
+Yes. For example, POST /employees can create a new employee in a collection, while PUT /employees/101 targets a 
+specific employee. HTTP method semantics distinguish their operations.
 
 
 
