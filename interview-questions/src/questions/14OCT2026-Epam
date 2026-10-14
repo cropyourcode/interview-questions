@@ -1,0 +1,186 @@
+1)Coding Question 1 — Move all zeros to the right
+Question:
+Given an integer array, move all 0s to the end/right side of the array while preserving the relative order of all non-zero elements.
+Requirements:
+- Do not use Java 8 Streams.
+- Modify the original array in-place.
+- Do not create a new array.
+- Return the number of zeros shifted.
+Example:
+Input:
+[10, 12, 0, 4, 31, 0, 58, 0]
+
+Output:
+[10, 12, 4, 31, 58, 0, 0, 0]
+
+Return:
+3
+
+Concepts tested:
+- Arrays
+- Two-pointer technique
+- In-place modification
+- Time/space complexity
+
+2)Coding Question 2 — Convert sentence to Camel/Pascal-style string using Java 8 Streams
+Question:
+Given a non-null sentence containing at least one word:
+- Ignore leading, trailing, and repeated whitespace.
+- Convert every word to lowercase.
+- Convert the first character of each word to uppercase.
+- Join all converted words together without spaces.
+Example:
+Input:
+"   hELLO    WoRLD   java   "
+
+Output:
+HelloWorldJava
+
+Requirements:
+- MUST use Java 8 Stream API.
+- Do not use for or while loops.
+- Avoid intermediate/local variables where required.
+Concepts tested:
+- Java 8 Streams
+- Lambda expressions
+- map()
+- Collectors.joining()
+- String manipulation
+- Regular expressions such as \\s+
+
+3)Java / Spring / SQL MCQ Questions
+Question 3 — Comparator in List.sort()
+Question:
+When:
+people.sort(comparator);
+
+uses a non-null:
+Comparator<Person>
+
+what does the comparator specify?
+Options included ideas such as:
+- Creating a new sorted copy of the list.
+- Defining the rule for comparing two Person objects.
+- Checking whether two references point to the same object.
+- Removing objects before sorting.
+Correct concept:
+The rule for comparing two Person objects to determine their order.
+
+Concepts tested:
+- Comparator
+- Collection sorting
+- Java functional interfaces
+Question 4 — Which interface can be used with a Lambda?
+Question:
+A lambda requires a functional interface with one abstract method. Which declaration is valid?
+One of the options was essentially:
+interface Action {
+    int run(int x);
+
+    default void log() {
+    }
+}
+
+Concept tested:
+A functional interface may have:
+Exactly one abstract method
++
+Any number of default/static methods
+
+Concepts tested:
+- Lambda expressions
+- Functional interfaces
+- Abstract methods
+- Default methods
+Question 5 — What happens when a Spring MVC @RestController returns a DTO?
+Question:
+An HTTP request handler inside a Spring MVC @RestController returns an object/DTO. What does Spring do with that DTO?
+Options included:
+- Add the DTO to a model used for rendering an HTML view.
+- Copy DTO fields into HTTP headers.
+- Resolve an HTML view based on DTO fields.
+- Serialize the DTO into the body of the HTTP response.
+Correct concept:
+Serialize the DTO into the body of the HTTP response.
+
+For example:
+@GetMapping("/user")
+public UserDto getUser() {
+    return new UserDto(1, "John");
+}
+
+Spring/Jackson typically converts it to:
+{
+  "id": 1,
+  "name": "John"
+}
+
+Concepts tested:
+- Spring MVC
+- @RestController
+- REST APIs
+- Serialization
+- Jackson
+- HttpMessageConverter
+Question 6 — equals() and hashCode() contract
+Question:
+What does the Java equals() / hashCode() contract require?
+Options included statements such as:
+- Objects that compare as equal must have the same hash code.
+- An object's hash code must always be unique.
+- Objects having matching hash codes must always be equal.
+- Equal objects must refer to the same instance.
+Correct rule:
+if (a.equals(b)) {
+    // must be true
+    a.hashCode() == b.hashCode();
+}
+
+But:
+a.hashCode() == b.hashCode()
+
+does not necessarily mean:
+a.equals(b)
+
+Concepts tested:
+- equals()
+- hashCode()
+- Hash collisions
+- HashMap
+- HashSet
+Question 7 — SQL NULL comparison
+Question:
+A missing email is stored as SQL NULL in a users table. Which condition should be used to find those records?
+Options included:
+email = NULL
+
+email = 'NULL'
+
+email IS NULL
+
+email = ''
+
+Correct syntax:
+email IS NULL
+
+Example:
+SELECT *
+FROM users
+WHERE email IS NULL;
+
+Concepts tested:
+- SQL NULL
+- IS NULL
+- Difference between NULL, empty string, and literal "NULL"
+Complete Interview Question Summary
+#	Question	Area
+1	Move all zeros to the right of an integer array in-place	Java / DSA
+2	Transform a sentence into HelloWorldJava using Java 8 Streams	Java 8 / Streams
+3	What does Comparator<Person> do in people.sort(comparator)?	Java Collections
+4	Which interface qualifies as a functional interface for a lambda?	Java 8 / Lambda
+5	What happens when @RestController returns a DTO?	Spring MVC
+6	What does the equals() / hashCode() contract require?	Core Java
+7	How do you check SQL NULL values?	SQL
+
+
+So, from the material shared in this session, I can recover 7 distinct interview questions: 2 coding questions + 5 Java/Spring/SQL conceptual questions.
