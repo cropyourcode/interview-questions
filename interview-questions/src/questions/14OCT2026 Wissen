@@ -1,0 +1,73 @@
+1)Spring Boot high response time with low CPU
+- A Spring Boot service receives around 500 requests/second.
+- Response time suddenly increases from 100 ms to 5 seconds.
+- CPU utilization remains around 40%.
+- Thread dump shows hundreds of threads waiting.
+- How would you investigate and fix the issue?
+
+2)Spring Boot application suddenly reaches 100% CPU
+- Traffic has not increased.
+- Application CPU suddenly reaches 100%.
+- How would you investigate the issue?
+
+3)Parallel Stream slower than Sequential Stream
+- A stream-processing implementation using parallelStream() becomes slower in production than using a sequential stream.
+- Why can parallelStream() be slower?
+- What production conditions can cause this?
+
+4)Distributed transaction consistency: Payment succeeds, Inventory fails
+- Flow:Order Service
+     ↓
+  Payment Service
+     ↓
+  Inventory Service
+- Payment succeeds.
+- Inventory update/reservation fails.
+- How would you maintain consistency?
+- Expected discussion: Saga, compensation, refund, retries, idempotency, eventual consistency.
+
+5)Kafka consumer lag suddenly increases
+- Consumer lag jumps from approximately:100,000 → 10,000,000 messages
+- How would you troubleshoot the issue?
+
+6)Kafka: Consumers vs Partitions
+- Consumer group has:20 consumers
+  8 partitions
+- How many consumers can actively consume messages at the same time?
+- Answer: 8 active consumers; 12 remain idle.
+
+7)Kafka event ordering
+- Events for a trade must be processed in this order:Trade Created
+     ↓
+  Trade Updated
+     ↓
+  Trade Cancelled
+- How would you design Kafka partitioning to maintain ordering?
+- Expected answer: use tradeId as the Kafka key so all events for the same trade go to the same partition.
+
+8)Implement LRU Cache
+- Design an LRU — Least Recently Used — cache.
+- It should support:get()
+  put()
+- When capacity is exceeded, the least recently used entry must be removed.
+- Explain the approach / write pseudocode.
+- Expected approach: HashMap + Doubly Linked List.
+
+9)Caching concepts — feedback/follow-up preparation
+- Interviewer specifically asked you to prepare more on:
+  - LRU
+  - MRU
+  - caching strategies
+  - eviction policies
+  - cache implementation
+
+10)Kafka — feedback/follow-up preparation
+- Interviewer specifically suggested you go deeper into Kafka, especially:
+  - partitions
+  - consumer groups
+  - lag
+  - ordering
+  - rebalancing
+  - offsets
+  - consumer scaling
+  - troubleshooting production Kafka issues
