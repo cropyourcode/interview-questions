@@ -1,0 +1,74 @@
+Q)Java 17 vs Java 21
+- What are the major features introduced in Java 17 and Java 21?
+- What are the important differences between Java 17 and Java 21?
+
+Q)First Non-Repeating Character
+- Given multiple strings, find the first non-repeating character from each string.
+- Example input:{"arrayb", "apple", "rat", "character"}
+- Solve it using Java Streams.
+
+Q)Java Stream API – Intermediate vs Terminal Operations
+- What are intermediate operations in Java Streams?
+- What are terminal operations?
+- Give examples of both.
+
+Q)Java 8 Functional Interfaces
+- What predefined/default functional interfaces were introduced in Java 8?
+- Examples: Predicate, Function, Consumer, Supplier, etc.
+
+Q)Functional Interfaces Used by Stream.collect()
+- collect() is a method in the Stream API. Which functional interfaces does it accept?
+- Expected discussion:collect(
+      Supplier<R> supplier,
+      BiConsumer<R, ? super T> accumulator,
+      BiConsumer<R, R> combiner
+  )
+- Also, what is the role of Collector?
+
+Q)ArrayList vs LinkedList Time Complexity
+- Compare the time complexity of ArrayList and LinkedList for:
+  - Getting/fetching an element
+  - Adding/inserting an element
+  - Deleting/removing an element
+  - Searching an element
+- Follow-up discussion included insertion/deletion at beginning, middle and end.
+
+Q)Spring Boot Auto-Configuration
+- Explain auto-configuration in Spring Boot.
+- How does @EnableAutoConfiguration work?
+- What role does @SpringBootApplication play?
+- How does Spring Boot decide which beans to configure automatically?
+
+Q)HikariCP / Spring Boot Configuration
+- How does Spring Boot configure components such as HikariCP automatically?
+- How does classpath-based configuration work?
+
+Q)Using Third-Party Components
+- When should we use a third-party component/library in a project?
+- What factors should be considered before adding a third-party dependency?
+
+Q)Third-Party Dependency Conflicts
+- What is a third-party dependency conflict?
+- How do you identify dependency/version conflicts?
+- How would you resolve them in Maven/Gradle?
+- Discussion included:mvn dependency:tree
+  
+  Maven exclusions and dependencyManagement.
+
+Q)Spring Boot Profiles
+- How do you maintain multiple profiles in a Spring Boot application?
+- Example environments:dev
+  qa
+  uat
+  prod
+- How do you activate a specific profile?
+- How is @Profile used?
+
+Q)End-of-Interview Question
+- “Do you have any questions for me?”
+- This was the closing question from the interviewer.
+Q)What functional interface stream collect method takes?
+Q)What happens during springboot application?
+Q)Spring profile how to do?
+Q)@Configuraion vs @Component
+
