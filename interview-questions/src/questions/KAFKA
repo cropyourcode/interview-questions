@@ -1,0 +1,600 @@
+Apache Kafka’s current documentation is for the 4.3.x line, with Kafka 4.3.1 released on 25 June 2026. Modern interviews increasingly include KRaft, the new consumer-group protocol, tiered storage and Share Groups in addition to traditional producer, consumer and delivery-semantics questions. 
+
+For a 10-year candidate, interviewers normally expect more than definitions. Your answers should include:
+Concept → internal working → important configuration → failure scenario → trade-off → production example.
+
+1. When should you use Kafka, and when should you not use it?
+    A strong answer should cover:
+    - Event streaming, event sourcing, audit trails, CDC and asynchronous communication
+    - High-throughput communication between microservices
+    - Replay and long-term event retention
+    - Kafka versus RabbitMQ, ActiveMQ, JMS and REST
+    - Cases where a traditional queue, synchronous REST call or database is simpler
+    - Operational cost of managing Kafka
+    Senior-level follow-up:
+    Would you use Kafka for request-response communication between two services?
+    
+    Usually not as the default choice. Kafka is better for asynchronous event-driven communication, although correlation IDs and reply topics can implement request-reply where required.
+
+2. Explain Kafka architecture and the complete flow of a message
+    Explain the following flow:
+    1. Producer connects to a bootstrap broker.
+    2. Producer obtains cluster metadata.
+    3. The partitioner selects a partition.
+    4. The message is sent to the partition leader.
+    5. Followers replicate the message.
+    6. The producer receives an acknowledgement based on acks.
+    7. A consumer polls the partition.
+    8. The consumer processes the record.
+    9. Its offset is committed to the internal __consumer_offsets topic.
+    Also explain brokers, topics, partitions, replicas, leaders, followers, consumer groups and the KRaft controller quorum.
+
+3. Why can Kafka support very high throughput?
+  A senior answer should mention:
+  - Sequential append-only disk writes
+  - Operating-system page cache
+  - Message batching
+  - Compression
+  - Zero-copy-style network transfer where applicable
+  - Partition-based parallelism
+  - Asynchronous producer APIs
+  - Consumer pull model
+  - Large sequential reads rather than random reads
+  Also explain that Kafka throughput comes from batching and sequential I/O, not because Kafka avoids disk persistence.
+
+4. How does Kafka maintain message ordering?
+    Kafka guarantees ordering only within a partition, not across an entire multi-partition topic.
+    
+    Explain:
+    - Records with the same key normally go to the same partition.
+    - A single partition is read sequentially.
+    - Multiple partitions allow parallelism but remove global ordering.
+    - Multiple consumer threads must not concurrently process records from the same partition without carefully managing order.
+    - Retry topics and asynchronous processing can change processing order.
+    Senior scenario:
+    All events for one order must be processed in order. What would you use as the message key?
+    
+    Use orderId as the key, provided the distribution of order IDs is sufficiently balanced.
+
+5. How do you decide the number of partitions for a topic?
+    Discuss:
+    - Expected events per second
+    - Average and peak message size
+    - Producer throughput per partition
+    - Consumer processing capacity
+    - Required consumer parallelism
+    - Ordering requirements
+    - Broker count and storage capacity
+    - Future growth and operational headroom
+    Also explain the consequences of increasing partitions:
+    - Existing records are not redistributed automatically.
+    - New records may be mapped differently.
+    - The same key can map to a different partition after the partition count changes.
+    - End-to-end ordering for that key across the change can therefore be affected.
+    - More partitions increase metadata, file handles, leader elections and recovery work.
+6. Explain replication, ISR, leader, follower, acks and min.insync.replicas
+    A good answer should connect all the concepts:
+    - Each partition has one leader and zero or more followers.
+    - Producers write to the leader.
+    - Followers fetch and replicate data from the leader.
+    - ISR means in-sync replicas.
+    - acks=0: no acknowledgement.
+    - acks=1: leader acknowledgement.
+    - acks=all: acknowledgement from all required in-sync replicas.
+    - min.insync.replicas defines the minimum ISR required for writes when using acks=all.
+    - unclean.leader.election.enable affects availability versus possible data loss.
+    Example:
+    
+    With replication factor 3, min.insync.replicas=2 and acks=all, Kafka can normally tolerate one unavailable replica and continue           safely writing.
+
+7. What happens when a Kafka broker or controller fails?
+    For a partition-leader broker failure:
+    1. The controller detects the broker failure.
+    2. An eligible in-sync replica is selected as the new leader.
+    3. Cluster metadata is updated.
+    4. Producers and consumers refresh metadata.
+    5. Requests resume against the new leader.
+    For a KRaft controller failure:
+    - Another controller in the quorum becomes active.
+    - The metadata log remains replicated through the controller quorum.
+    - Data-plane brokers continue handling produce and fetch requests, subject to metadata availability.
+    Discuss recovery time, under-replicated partitions, leader election, client retries and quorum availability.
+
+8. What is KRaft, and how is it different from ZooKeeper-based Kafka?
+    Kafka 4.0 was the first major release to operate entirely without ZooKeeper. KRaft stores and manages cluster metadata through Kafka’s own Raft-based controller quorum. Apache Kafka
+    
+    Cover:
+    - Metadata quorum
+    - Active and standby controllers
+    - Metadata log
+    - Broker and controller process roles
+    - Simplified operations compared with ZooKeeper
+    - Controller quorum sizing
+    - Failure and quorum considerations
+    - Migration and rolling-upgrade planning for older clusters
+    - metadata.version and feature-level management
+    A 10-year candidate may also be asked to explain a zero-downtime Kafka upgrade strategy.
+
+9. How do Kafka producer acknowledgements, retries and idempotence work?
+    Discuss these configurations:
+    acks=all
+    enable.idempotence=true
+    retries=...
+    delivery.timeout.ms=...
+    request.timeout.ms=...
+    max.in.flight.requests.per.connection=...
+    
+    Explain:
+    - Retries can produce duplicates without idempotence.
+    - An idempotent producer uses a producer ID and sequence numbers.
+    - Brokers reject duplicate sequence numbers.
+    - Idempotence works within a producer session and partition.
+    - delivery.timeout.ms limits the total delivery period.
+    - Retriable and non-retriable failures must be handled differently.
+    Also explain why blindly setting unlimited retries without considering delivery timeout and business latency is dangerous.
+
+10. Explain at-most-once, at-least-once and exactly-once processing
+    At-most-once
+    Commit the offset before processing.
+    - Possible message loss
+    - No duplicate processing
+    At-least-once
+    Process first, commit after successful processing.
+    - No intentional loss
+    - Duplicate processing is possible after failures
+    Exactly-once
+    Use Kafka transactions or Kafka Streams exactly-once processing when reading from Kafka and writing back to Kafka.
+    
+    Important senior-level limitation:
+    
+    Kafka transactions alone do not automatically provide exactly-once atomicity between Kafka and an external database, REST API or email service.
+
+11. How do Kafka transactions and exactly-once semantics work?
+    Explain:
+    - transactional.id
+    - Producer initialization
+    - beginTransaction()
+    - Producing records
+    - sendOffsetsToTransaction()
+    - commitTransaction()
+    - abortTransaction()
+    - Producer fencing
+    - Transaction timeout
+    - Consumer isolation.level=read_committed
+    Kafka can atomically commit output records and consumed offsets in a Kafka-to-Kafka processing pipeline. Consumers using read_committed do not return records from aborted transactions. Apache Kafka
+    
+    In Spring Kafka, transactions can be configured using KafkaTransactionManager, KafkaTemplate and a unique transaction-ID prefix for each application instance. Home
+
+12. How does a consumer group work?
+    Explain:
+    - Consumers sharing the same group.id form one logical consumer group.
+    - Each partition is assigned to at most one consumer within that group at a time.
+    - Different consumer groups independently consume the same topic.
+    - Maximum active consumer parallelism is limited by partition count.
+    - Extra consumers remain idle.
+    - Adding or removing consumers can trigger rebalancing.
+    Common question:
+    A topic has 10 partitions and the application has 15 consumer instances. What happens?
+    
+    Ten consumers receive partitions, while approximately five consumers remain idle for that topic.
+
+13. What causes consumer rebalancing, and how would you reduce its impact?
+    Common triggers:
+    - Consumer joins or leaves the group
+    - Consumer crashes
+    - Session timeout
+    - max.poll.interval.ms exceeded
+    - Topic partition count changes
+    - Subscription changes
+    - Application deployment or autoscaling
+    Discuss:
+    - Eager versus cooperative assignment
+    - RangeAssignor
+    - RoundRobinAssignor
+    - StickyAssignor
+    - CooperativeStickyAssignor
+    - Static membership using group.instance.id
+    - Graceful shutdown
+    - Avoiding long processing inside the poll thread
+    The next-generation consumer rebalance protocol became generally available in Kafka 4.0. It provides incremental rebalancing and moves important assignment and heartbeat controls to the server side. Apache Kafka
+    
+    Be prepared to explain:
+    group.protocol=consumer
+    
+    and how it differs from the classic protocol.
+
+14. How should consumer offsets be managed?
+    Compare:
+    Automatic commit
+    enable.auto.commit=true
+    
+    Simple, but commits may not align precisely with successful business processing.
+    Manual synchronous commit
+    consumer.commitSync();
+    
+    Safer acknowledgement of the result, but the consumer waits for the commit.
+    Manual asynchronous commit
+    consumer.commitAsync();
+    
+    Better throughput, but error handling and commit ordering require care.
+    
+    Explain:
+    - Current position versus committed offset
+    - Commit per record versus per batch
+    - Commit after database processing
+    - Offset reset policies
+    - Duplicate processing after failure
+    - Why offsets should not be committed before irreversible processing unless at-most-once is acceptable
+
+15. Explain max.poll.interval.ms, session.timeout.ms, heartbeat settings and max.poll.records
+    Key distinctions:
+    - session.timeout.ms: how long the group coordinator waits before considering the consumer unavailable.
+    - Heartbeat interval: how frequently consumer liveness is communicated under the applicable protocol.
+    - max.poll.interval.ms: maximum time allowed between calls to poll().
+    - max.poll.records: maximum number of records returned in one poll.
+    Typical production problem:
+    Processing takes ten minutes, but max.poll.interval.ms is five minutes.
+    
+    The consumer can be removed from the group, causing a rebalance and possible duplicate processing.
+    
+    Solutions include:
+    - Reduce batch size.
+    - Increase max.poll.interval.ms.
+    - Improve processing time.
+    - Pause and resume partitions carefully.
+    - Offload processing while preserving partition order.
+    - Use a different architecture for very long-running tasks.
+
+16. Consumer lag is continuously increasing. How would you investigate?
+    Check:
+    1. Incoming producer rate versus processing rate
+    2. Number of partitions and active consumers
+    3. Slow database or downstream APIs
+    4. Consumer errors and retry loops
+    5. Rebalance frequency
+    6. Garbage-collection pauses
+    7. Thread-pool saturation
+    8. Network and broker request latency
+    9. Large messages
+    10. max.poll.records and fetch settings
+    11. Hot partitions
+    12. Deserialization failures
+    13. Disk or CPU constraints
+    14. Whether all partitions have similar lag
+    Do not solve every lag problem by adding consumers. Additional consumers help only when sufficient partitions exist and the downstream dependency can handle the extra load.
+
+17. How do you make a Kafka consumer idempotent?
+    Because at-least-once delivery can produce duplicates, business processing should often be idempotent.
+    
+    Common approaches:
+    - Unique event ID
+    - Database unique constraint
+    - Processed-event or inbox table
+    - Conditional update based on version
+    - Idempotency key
+    - Upsert instead of blind insert
+    - Compare-and-set
+    - Deduplication cache with an appropriate retention period
+    Example:
+    processed_events
+    ----------------
+    event_id
+    consumer_name
+    processed_at
+    
+    Insert event_id in the same database transaction as the business update. If the unique insert fails, treat the event as already processed.
+
+18. How would you implement retries, backoff and a dead-letter topic without breaking ordering?
+    Explain three categories:
+    - Transient error: retry with backoff
+    - Permanent business error: send to DLT or rejection topic
+    - Malformed/deserialization error: handle separately because normal retry may never succeed
+    Discuss:
+    - Blocking retries
+    - Retry topics
+    - Exponential backoff
+    - Maximum attempts
+    - DLT metadata
+    - Alerting and reprocessing
+    - Poison messages
+    - Retry-topic partition counts
+    - Ordering implications
+    Critical trade-off:
+    
+    A blocking retry preserves partition order but can block all subsequent records in that partition. A retry-topic approach improves availability but can allow later records to be processed before the failed record.
+
+19. How would you configure Kafka in a Spring Boot application?
+    Be prepared to explain:
+    - KafkaTemplate
+    - @KafkaListener
+    - ConcurrentKafkaListenerContainerFactory
+    - Consumer and producer factories
+    - Serializers and deserializers
+    - Listener concurrency
+    - Record versus batch listeners
+    - Acknowledgement modes
+    - Error handlers
+    - Transactions
+    - Micrometer metrics
+    - Graceful shutdown
+    Common follow-up:
+    What happens when listener concurrency is 10 but the topic has only 4 partitions?
+    
+    Only four consumer threads can actively process that topic in the group; the remaining threads will not receive a partition.
+
+20. What is the difference between blocking and non-blocking retries in Spring Kafka?
+    Blocking retry
+    The consumer thread retries processing before moving ahead.
+    
+    Suitable when:
+    - Retry delay is short
+    - Strict partition ordering matters
+    - Failures are expected to recover quickly
+    Non-blocking retry
+    The failed record is published to retry topics and consumed after a delay.
+    
+    Suitable when:
+    - Retry delay is long
+    - One failing record should not block a partition
+    - Some temporary reordering is acceptable
+    Spring Kafka supports non-blocking retry infrastructure through @RetryableTopic and DLT handling through @DltHandler. Home
+    
+    A senior answer should also discuss DefaultErrorHandler, DeadLetterPublishingRecoverer and deserialization exceptions.
+
+21. How do you maintain consistency when one operation updates a database and publishes to Kafka?
+    This is the classic dual-write problem.
+    
+    Do not simply perform:
+    database.save(order);
+    kafkaTemplate.send("order-events", event);
+    
+    because either operation can succeed while the other fails.
+    
+    Common solutions:
+    Transactional outbox
+    1. Update the business table.
+    2. Insert an event into an outbox table in the same database transaction.
+    3. Publish the outbox event asynchronously.
+    4. Mark it published or use CDC.
+    CDC
+    Use a tool such as Debezium or another change-data-capture solution to publish database changes.
+    Idempotent compensation
+    Use only where delayed consistency and compensation are acceptable.
+    
+    Also explain why combining a database transaction manager with a Kafka transaction does not create a true distributed atomic transaction unless an appropriate distributed transaction protocol is used.
+
+22. How do you handle serialization, schema evolution and data contracts?
+    Discuss:
+    - JSON versus Avro versus Protobuf
+    - Schema Registry
+    - Backward compatibility
+    - Forward compatibility
+    - Full compatibility
+    - Optional fields and defaults
+    - Field removal and renaming
+    - Consumer-first and producer-first deployments
+    - Versioning strategy
+    - Deserialization failures
+    - Contract testing in CI/CD
+    A schema registry centralizes schema definitions and compatibility enforcement so independent producers and consumers can evolve safely. Confluent
+    
+    A senior candidate should avoid suggesting that every schema change requires a new topic.
+
+23. When would you use Kafka Connect, Kafka Streams or a custom Java consumer?
+    Kafka Connect
+    Use for standardized data movement:
+    - Database to Kafka
+    - Kafka to search engines
+    - Object storage
+    - Data warehouses
+    Kafka Streams
+    Use for stateful and stateless stream processing:
+    - Filtering
+    - Transformation
+    - Aggregation
+    - Joins
+    - Windowing
+    - Local state stores
+    Custom Java/Spring consumer
+    Use when:
+    - Complex business workflows are required
+    - External APIs or databases must be called
+    - Custom lifecycle and retry logic are needed
+    - Existing Spring Boot service patterns must be reused
+    Also discuss operational ownership, scalability, state management and exactly-once requirements.
+
+24. How would you tune Kafka producer, consumer and broker performance?
+    Producer
+    Discuss:
+    batch.size
+    linger.ms
+    compression.type
+    buffer.memory
+    acks
+    delivery.timeout.ms
+    max.request.size
+    
+    Consumer
+    Discuss:
+    fetch.min.bytes
+    fetch.max.wait.ms
+    max.poll.records
+    max.partition.fetch.bytes
+    fetch.max.bytes
+    
+    Broker and infrastructure
+    Discuss:
+    - Partition distribution
+    - Disk throughput and latency
+    - Network bandwidth
+    - Page cache
+    - Replication traffic
+    - Request-handler and network threads
+    - JVM heap and garbage collection
+    - Message size
+    - Compression
+    - Storage capacity
+    - Controller and broker metrics
+    Always describe the trade-off between throughput, latency, durability and memory usage.
+
+25. What is a hot partition, and how would you fix it?
+    A hot partition receives disproportionately high traffic because of skewed keys.
+    
+    Example:
+    key = country
+    
+    If 70% of events belong to India, one partition can become overloaded.
+    
+    Possible solutions:
+    - Better key distribution
+    - Composite key
+    - Key salting
+    - Split a high-volume tenant
+    - Separate topic for exceptional workloads
+    - Repartition upstream
+    - Increase partitions where appropriate
+    - Isolate very large customers
+    - Use application-level ordering rather than one globally hot key
+    Do not simply remove the key when per-entity ordering is required.
+
+26. Explain retention, log compaction, replay and tiered storage
+    Time/size-based retention
+    Deletes old log segments according to configured time or size.
+    Log compaction
+    Retains the latest available value for each key over time.
+    
+    Explain:
+    - Tombstone records
+    - cleanup.policy=delete
+    - cleanup.policy=compact
+    - Combining delete and compact
+    - Segment rolling
+    - Compaction is asynchronous
+    - A key is required for meaningful compaction
+    Replay
+    Use:
+    - A new consumer group
+    - Offset reset
+    - A dedicated replay application
+    - Idempotent side effects
+    - Rate limiting and downstream protection
+    Tiered storage
+    Current Kafka supports local and remote storage tiers, allowing older completed segments to be moved to external storage while recent data remains local. Apache Kafka
+    
+    Be ready to discuss cost, backfill performance, remote-storage plugins and retention policies.
+
+27. Design a Kafka-based system processing hundreds of thousands or millions of events per second
+    The interviewer expects capacity planning, not only component names.
+    
+    Cover:
+    - Expected average and peak throughput
+    - Message size
+    - Partition count
+    - Replication factor
+    - Broker count
+    - Storage calculation
+    - Retention period
+    - Compression
+    - Producer batching
+    - Consumer parallelism
+    - Ordering key
+    - Backpressure
+    - Retry and DLT strategy
+    - Idempotency
+    - Schema governance
+    - Monitoring
+    - Security
+    - Disaster recovery
+    - Growth headroom
+    - Failure testing
+    Example storage estimate:
+    daily storage =
+    messages/second
+    × average message bytes
+    × 86,400
+    × replication factor
+    
+    Then add protocol overhead, indexes, remote storage, safety margin and peak growth.
+
+28. What Kafka metrics would you monitor, and how would you investigate a production incident?
+    Important metrics include:
+    - Consumer lag by partition
+    - Under-replicated partitions
+    - Offline partitions
+    - ISR shrink and expand rate
+    - Produce and fetch request latency
+    - Request queue time
+    - Failed produce/fetch requests
+    - Rebalance count and duration
+    - Disk utilization
+    - Network throughput
+    - Broker CPU and JVM metrics
+    - Page-cache effectiveness
+    - Controller quorum health
+    - Transaction and coordinator errors
+    - DLT and retry-topic volume
+    Scenario:
+    Kafka processing latency rose from 100 milliseconds to 10 seconds, but application CPU is only 40%.
+    
+    Investigate downstream waits, consumer lag, thread-pool saturation, database latency, network waits, rebalances, broker request latency, lock contention and connection-pool exhaustion—not just CPU.
+
+29. How would you secure Kafka and design multi-region disaster recovery?
+    Security
+    Explain:
+    - TLS encryption
+    - SASL authentication
+    - ACL authorization
+    - Service accounts
+    - Certificate and secret rotation
+    - Topic-level permissions
+    - Consumer-group permissions
+    - Quotas
+    - Audit logging
+    - Network isolation
+    - Least-privilege access
+    Disaster recovery
+    Discuss:
+    - Active-passive versus active-active
+    - MirrorMaker 2 or managed replication alternatives
+    - Topic replication between regions
+    - Consumer-offset synchronization
+    - RPO and RTO
+    - Duplicate events during failover
+    - Conflict handling
+    - DNS or application routing
+    - Failback strategy
+    - Regular DR testing
+    A strong answer explicitly states that cross-region replication is normally asynchronous, so zero RPO should not be casually promised.
+
+30. What are Kafka Share Groups or Kafka Queues, and how are they different from normal consumer groups?
+    Kafka 4.2 made Share Groups, also called Kafka Queues, production-ready. They provide queue-like cooperative consumption in which multiple consumers can process records from the same partitions using individual acknowledgements and delivery counting. Apache Kafka
+    
+    Compare:
+    Traditional consumer group
+    - One partition is assigned to one consumer at a time.
+    - Parallelism is bounded by partition count.
+    - Ordering within the partition is easier to preserve.
+    - Offsets represent group progress.
+    Share Group
+    - Multiple consumers can cooperatively process records from the same partitions.
+    - Individual records can be acknowledged.
+    - Better suited to work-queue-style processing.
+    - Delivery attempts and acknowledgement semantics become important.
+    - Strict partition-order assumptions may not apply in the same way.
+    This is one of the most important modern Kafka questions for interviews involving Kafka 4.x.
+
+----
+Most Important 12 to Prepare First
+When preparation time is limited, prioritize:
+1. Architecture and message flow
+2. Partitioning and ordering
+3. Replication, ISR, acks and min.insync.replicas
+4. Producer idempotence
+5. Delivery semantics
+6. Transactions and exactly-once limitations
+7. Consumer groups and rebalancing
+8. Offset management
+9. Consumer lag troubleshooting
+10. Retry, DLT and idempotent consumption
+11. Database–Kafka consistency using the outbox pattern
+12. KRaft and the new consumer protocol
