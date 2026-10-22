@@ -1,0 +1,152 @@
+Q1) Java 21 Virtual thread ?
+
+Ans)
+
+What is a Virtual Thread?
+  A lightweight thread managed by the JVM, not directly tied to an OS thread. 
+  It lets applications handle large numbers of concurrent tasks, especially I/O-heavy ones.
+
+Why were they introduced?
+  Platform threads are expensive because each is backed by an OS thread. 
+  Virtual threads make thousands or even millions of concurrent tasks practical.
+
+Faster than platform threads?
+  Not necessarily. The advantage is higher concurrency and scalability, not faster individual operations.
+  Note: Virtual threads improve concurrency, not CPU performance.
+
+PLATFORM VS VIRTUAL THREADS
+---------------------------
+  Platform Thread
+    - Backed by an OS thread
+    - More expensive
+    - Uses more memory
+    - Limited number can be created
+    - Suitable for CPU-intensive work
+  Virtual Thread
+    - Managed by the JVM
+    - Extremely lightweight
+    - Can have very large numbers
+    - Excellent for I/O-bound workloads
+    - Designed for high concurrency
+
+  Can we create millions of Virtual Threads?
+    Potentially yes, but your database, memory, CPU, network and external APIs still have limits.
+
+  Should they replace thread pools?
+    Not completely. For many I/O tasks, use one virtual thread per task instead of a small worker pool.
+
+HOW VIRTUAL THREADS WORK
+------------------------
+  What is a Carrier Thread?
+    A platform thread that temporarily executes a virtual thread. Many virtual threads share a smaller number of carrier threads.
+  
+  What happens when a Virtual Thread blocks?
+    Step 1. Virtual Thread runs on Carrier
+    Step 2. Blocking I/O
+    Step 3. Virtual Thread unmounts
+    Step 4. Carrier becomes available
+    Step 5. Another Virtual Thread runs
+            When the I/O finishes, the virtual thread continues.
+  
+  Does every Virtual Thread have an OS thread?
+    No. Thousands are multiplexed over far fewer carrier threads, so 10,000 waiting requests don't need 10,000 OS threads.
+
+I/O-BOUND VS CPU-BOUND
+----------------------
+  Why are they good for I/O?
+    I/O mostly waits (HTTP, database, file, network, socket operations). While one virtual thread waits, the carrier runs another task.
+  
+  Good for CPU-heavy tasks?
+    Not particularly. More virtual threads don't create more CPU cores.
+    Example
+    Good:
+    var result = httpClient.send(request);
+    Not automatically better:
+    for (long i = 0; i < 1_000_000_000; i++) {
+        calculate(i);
+    }
+  
+  INTERVIEW RULE
+    - I/O-bound → Virtual Threads shine
+    - CPU-bound → Limit concurrency according to available CPU
+
+PINNING & SYNCHRONIZATION
+-------------------------
+  What is Virtual Thread Pinning?
+    A virtual thread cannot easily unmount from its carrier during a blocking operation, which reduces scalability.
+  
+  Can synchronized cause pinning?
+    Yes, when blocking while holding a monitor:
+    synchronized (lock) {
+        slowBlockingCall();
+    }
+  
+  Better approach: keep synchronized sections short
+  synchronized (lock) {
+      updateState();
+  }
+  slowBlockingCall();
+  
+  
+  Is synchronized forbidden?
+    No. The problem is long blocking work while holding a monitor, not synchronized itself.
+
+DATABASES, RESOURCES & SPRING BOOT
+----------------------------------
+  Do they remove database limits?
+    No. Virtual threads are cheap. Database connections are not.
+    10,000 Virtual Threads → 100 DB Connections → Database is still the bottleneck.
+  
+  Can they overload an API?
+    Yes. Higher concurrency can overwhelm databases, REST APIs, third-party services, connection pools and memory.
+    Use rate limits, semaphores, connection pools and timeouts.
+  
+  Can Spring Boot use them?
+    Yes, on a suitable Java version:
+    spring.threads.virtual.enabled=true
+  
+  INTERVIEW LINE
+  Virtual threads remove thread scarcity, not system-resource limits.
+
+CREATING VIRTUAL THREADS
+-------------------------
+  How do you create a Virtual Thread?
+    Thread.startVirtualThread(() -> {
+        System.out.println("Hello");
+    });
+    Or:
+    Thread.ofVirtual()
+          .start(() -> doWork());
+  
+  How do you run many independent tasks?
+    try (var executor =
+            Executors.newVirtualThreadPerTaskExecutor()) {
+    
+        for (int i = 0; i < 1000; i++) {
+            executor.submit(() -> callApi());
+        }
+    }
+
+PRACTICAL QUESTIONS
+-------------------
+  A fixed pool of Virtual Threads?
+    Usually no. Create one virtual thread per task and limit the actual scarce resource instead.
+  
+  What if every task accesses a database?
+    10,000 virtual threads doesn't mean 10,000 simultaneous queries. Control access with the connection pool or 
+    another concurrency mechanism.
+  
+  What if a task throws an exception?
+    With submit(), it is retrieved through the returned Future:
+    Future<?> future = executor.submit(() -> {
+        throw new RuntimeException("Failed");
+    });
+    
+    future.get();
+  
+  Do they improve latency?
+    Not automatically. They improve throughput and scalability, but don't make a database or network request faster.
+
+
+
+
