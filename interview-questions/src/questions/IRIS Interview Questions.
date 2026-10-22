@@ -1,0 +1,35 @@
+What are the key features of Java 17?
+•	 What happens when we compare two StringBuffer objects using equals()?
+•	Which data type/class would you use for storing passwords?
+•	How can we handle the diamond problem in interfaces?
+•   What happens when a thread pool's queue becomes full?
+•   What is the difference between REQUIRED, REQUIRES_NEW, NESTED, and MANDATORY propagation?
+•   Explain transaction isolation levels and phantom reads.
+•   What happens when an exception occurs inside a @Transactional method?
+•   How would you protect a REST API from excessive traffic?
+•   How would you design pagination for millions of records?
+•   Explain the Outbox Pattern and why it is useful in microservices.
+•	How would you prevent cascading failures between microservices?
+•	How does @Transactional work internally?
+•	How would you optimize a slow Spring Boot API?
+•	How would you design service discovery in a microservices architecture?
+•	How would you secure a Spring Boot REST API using JWT?
+•	How would you implement OAuth2 authentication in Spring Boot?
+•	How would you design communication between microservices?
+•	REST vs Kafka — when would you choose each?
+•	How does Spring Boot handle dependency injection?
+•	How would you implement Retry, Circuit Breaker, and Bulkhead?
+•	How would you design idempotent APIs in microservices?
+•	How would you handle distributed transactions using the Saga pattern?
+•	How would you maintain data consistency between microservices?
+•	How would you handle duplicate Kafka messages?
+•	How would you troubleshoot increasing Kafka consumer lag?
+•	How would you solve an N+1 query problem in Spring Data JPA?
+•	How would you design an API Gateway for microservices?
+•	Give a real-time use case of ArrayList.
+•	Does HashMap accept duplicate keys?
+•	What happens when we add a duplicate key to a HashMap?
+•	What happens to the previous value when the same key is inserted again?
+•	How would you use ElastiCache to improve microservice performance?
+•	How would you monitor Java microservices using CloudWatch, metrics, and distributed tracing?
+•	A production microservice suddenly becomes slow. How would you troubleshoot Java, Spring Boot, AWS, database, and network issues?
