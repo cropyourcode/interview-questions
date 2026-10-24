@@ -1,0 +1,9 @@
+1)Spring @GlobalExceptionHandler vs. @ControllerAdvice? Real-time usage?
+2)Client send 10 requests, out of which there is a failure of 1 request processing. How do we need to inform the error to user?
+3)Where/Which scenario an asynchronous REST API response recommended?
+4)Try without catch  and finally possible?
+5)HashMap internal structure?
+6)ConcurrentHashmap vs Hashmap?
+7)How to write a Junit c=a+b?
+8)Primary vs Qualifier annotation?
+9)Achievement in your recent project?
