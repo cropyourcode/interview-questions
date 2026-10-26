@@ -1,0 +1,79 @@
+1. Arrays & Hashing
+-------------------
+1. Two Sum
+2. Best Time to Buy and Sell Stock
+3. Contains Duplicate
+4. Product of Array Except Self
+5. Maximum Subarray
+
+2. Strings
+----------
+6. Valid Anagram
+7. Valid Palindrome
+8. Longest Substring Without Repeating Characters
+9. Longest Common Prefix
+10. Group Anagrams
+
+3. Two Pointers & Sliding Window
+---------------------------------
+11. 3Sum
+12. Container With Most Water
+13. Move Zeroes
+14. Minimum Size Subarray Sum
+15. Longest Repeating Character Replacement
+
+4. Binary Search
+----------------
+16. Binary Search
+17. Search in Rotated Sorted Array
+18. Find First and Last Position of Element
+19. Search a 2D Matrix
+20. Find Minimum in Rotated Sorted Array
+
+5. Linked List
+---------------
+21. Reverse Linked List
+22. Detect Cycle in Linked List
+23. Merge Two Sorted Lists
+24. Remove Nth Node From End
+25. Add Two Numbers
+
+6. Stack & Queue
+-----------------
+26. Valid Parentheses
+27. Min Stack
+28. Next Greater Element
+29. Daily Temperatures
+30. Largest Rectangle in Histogram
+
+7. Trees & BST
+---------------
+31. Maximum Depth of Binary Tree
+32. Invert Binary Tree
+33. Level Order Traversal
+34. Validate Binary Search Tree
+35. Lowest Common Ancestor
+
+8. Recursion & Backtracking
+----------------------------
+36. Subsets
+37. Permutations
+38. Combination Sum
+39. Generate Parentheses
+40. Word Search
+
+9. Dynamic Programming
+-----------------------
+41. Climbing Stairs
+42. House Robber
+43. Coin Change
+44. Longest Increasing Subsequence
+45. Longest Common Subsequence
+
+10. Graphs & Greedy
+-------------------
+46. Number of Islands
+47. Clone Graph
+48. Course Schedule
+49. Jump Game
+50. Merge Intervals

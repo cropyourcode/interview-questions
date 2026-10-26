@@ -1,0 +1,5 @@
+
+
+1)new vs newInstance()
+2)ClasNotFoundException() vs NoClassDefFoundError
+3)instaceOf vs isInstance()
