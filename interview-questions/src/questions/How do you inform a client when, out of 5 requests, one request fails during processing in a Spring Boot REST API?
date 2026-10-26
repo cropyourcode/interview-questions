@@ -1,0 +1,311 @@
+How do you inform a client when, out of 5 requests, one request fails during processing in a Spring Boot REST API?
+
+For a 10-year experienced Java/Spring Boot developer, the answer should not focus only on exception handling. It should cover:
+- API contract design
+- Partial failure handling
+- HTTP status codes
+- Transaction boundaries
+- Asynchronous processing
+- Retry and idempotency
+- Kafka/event-driven processing
+- Observability and traceability
+The correct approach depends on the business requirement.
+Top 5 Approaches
+#	Approach	Best Suited For
+1	Partial-success response	One bulk API contains multiple independent items
+2	Independent HTTP response per request	Five separate REST calls
+3	Transactional all-or-nothing	All 5 operations must succeed together
+4	Asynchronous processing with status API/callback	Long-running processing
+5	Event-driven processing with Kafka + Retry + DLQ	High-volume distributed microservices
+
+
+1. Partial-Success Response
+This is usually the preferred approach when a single bulk API contains multiple independent requests.
+
+Example:
+POST /orders/bulk
+Suppose the processing result is:
+Order-1 -> SUCCESS
+Order-2 -> SUCCESS
+Order-3 -> FAILED
+Order-4 -> SUCCESS
+Order-5 -> SUCCESS
+The API can return:
+{
+  "status": "PARTIAL_SUCCESS",
+  "total": 5,
+  "success": 4,
+  "failed": 1,
+  "results": [
+    {
+      "requestId": "101",
+      "status": "SUCCESS"
+    },
+    {
+      "requestId": "102",
+      "status": "SUCCESS"
+    },
+    {
+      "requestId": "103",
+      "status": "FAILED",
+      "errorCode": "PAYMENT_FAILED",
+      "message": "Payment could not be processed"
+    },
+    {
+      "requestId": "104",
+      "status": "SUCCESS"
+    },
+    {
+      "requestId": "105",
+      "status": "SUCCESS"
+    }
+  ]
+}
+Interview Answer
+If the requests are independent, I would return a partial-success response containing the status of every item. This allows the client to identify exactly which request failed without treating the entire batch as failed.
+
+A common response is:
+HTTP 200 OK
+status = PARTIAL_SUCCESS
+The HTTP request itself was processed successfully, while one of the business operations failed.
+
+This would normally be my first recommendation for a bulk API where partial success is allowed.
+2. Separate HTTP Response for Each Request
+If these are actually 5 separate REST calls, each request should receive its own HTTP response.
+
+Example:
+Request 1 -> HTTP 201 Created
+Request 2 -> HTTP 201 Created
+Request 3 -> HTTP 422 Unprocessable Entity
+Request 4 -> HTTP 201 Created
+Request 5 -> HTTP 201 Created
+For the failed request:
+{
+  "status": 422,
+  "errorCode": "INVALID_ORDER",
+  "message": "Order quantity is invalid",
+  "requestId": "REQ-103",
+  "traceId": "abc-123"
+}
+In Spring Boot, exception handling should normally be centralized using:
+@RestControllerAdvice
+and:
+@ExceptionHandler
+instead of putting try/catch blocks in every controller.
+Interview Answer
+If they are independent HTTP calls, every request should have its own response. I would return an appropriate 4xx or 5xx status for the failed request and use a standard error response containing request ID, error code, message, and correlation or trace ID.
+
+3. Transactional All-or-Nothing
+Sometimes all five operations are part of the same business transaction.
+
+Example:
+Debit account
+Create order
+Update inventory
+Generate invoice
+Update ledger
+If the business requires atomicity, either all operations should succeed or all should fail.
+
+Example:
+@Transactional
+public void process(List<Request> requests) {
+
+    for (Request request : requests) {
+        processRequest(request);
+    }
+}
+If request 3 fails:
+Request 1 -> Rollback
+Request 2 -> Rollback
+Request 3 -> Failed
+Request 4 -> Not processed
+Request 5 -> Not processed
+Interview Answer
+If the business requires atomicity, I would not return partial success. I would execute the operations within a single transaction and roll back the complete operation if any mandatory step fails.
+
+The transaction strategy should always be driven by business consistency requirements.
+4. Asynchronous Processing Using 202 Accepted
+If processing the five requests takes significant time, keeping the HTTP connection open may not be a good design.
+
+The API can return:
+HTTP 202 Accepted
+with:
+{
+  "batchId": "BATCH-123",
+  "status": "PROCESSING"
+}
+The client can later check the status:
+GET /batches/BATCH-123
+Example response:
+{
+  "batchId": "BATCH-123",
+  "status": "PARTIAL_SUCCESS",
+  "total": 5,
+  "success": 4,
+  "failed": 1
+}
+The server may also notify the client through:
+- Webhook
+- Callback API
+- Server-Sent Events (SSE)
+- WebSocket
+- Event/message
+Interview Answer
+For long-running operations, I would make the processing asynchronous. The REST API would return 202 Accepted with a batch or job ID, and the client could query the job status or receive a callback when processing completes.
+
+5. Kafka / Event-Driven Processing with Retry and DLQ
+For high-volume distributed systems, asynchronous event-driven processing can be a better approach.
+
+Typical flow:
+Client
+   |
+   v
+REST API
+   |
+   v
+Kafka
+   |
+   v
+Consumer
+   |
+   v
+Process each request
+Suppose:
+Message 1 -> SUCCESS
+Message 2 -> SUCCESS
+Message 3 -> FAILED
+Message 4 -> SUCCESS
+Message 5 -> SUCCESS
+For message 3:
+Retry 1
+   |
+Retry 2
+   |
+Retry 3
+   |
+DLQ
+For example:
+order-retry-topic
+and finally:
+order-dlq
+The application can maintain a batch status such as:
+BATCH-1001
+
+SUCCESS = 4
+FAILED  = 1
+Interview Answer
+For high-volume distributed systems, I would prefer asynchronous event-driven processing. Each request can be published to Kafka and processed independently. Transient failures can be retried with backoff, and non-recoverable failures can be moved to a dead-letter topic. The client can track the overall status using a batch ID.
+
+Important considerations:
+- Idempotency
+- Retry with backoff
+- Dead Letter Queue / Dead Letter Topic
+- Correlation ID
+- Distributed tracing
+- Logging
+- Metrics and monitoring
+Important Senior-Level Considerations
+Transaction Boundary
+Before deciding on the implementation, determine whether the requests are independent.
+Partial Success Allowed
+Request 1 -> SUCCESS
+Request 2 -> SUCCESS
+Request 3 -> FAILED
+Request 4 -> SUCCESS
+Request 5 -> SUCCESS
+Each item can have an independent transaction boundary.
+
+For example:
+@Transactional(propagation = Propagation.REQUIRES_NEW)
+public void process(Request request) {
+    // process one request
+}
+This prevents one failed request from rolling back the successful requests.
+All-or-Nothing
+If the business requires all requests to succeed together, process them in one transaction.
+@Transactional
+public void processAll(List<Request> requests) {
+
+    for (Request request : requests) {
+        process(request);
+    }
+}
+If one request fails, the entire transaction rolls back.
+Retry Strategy
+Do not retry every failure blindly.
+Non-Retryable Failures
+Validation error
+Invalid request
+Insufficient balance
+HTTP 400
+Business rule violation
+These normally should not be retried.
+Retryable Failures
+Temporary database connection issue
+HTTP 503
+Network timeout
+Temporary Kafka failure
+Downstream service unavailable
+These can be retried using a bounded retry policy with exponential backoff.
+
+Common options include:
+- Spring Retry
+- Resilience4j
+- Kafka retry topics
+Idempotency
+When retries are possible, the operation should ideally be idempotent.
+
+Example:
+Idempotency-Key: REQ-103
+This prevents duplicate processing when the original request succeeded but the client did not receive the response.
+
+This is especially important for:
+- Payment processing
+- Order creation
+- Inventory updates
+- Financial transactions
+- Kafka consumers
+HTTP Status Code Guidance
+Possible status codes include:
+Status Code	Usage
+200 OK	Bulk request processed; item-level response contains success/failure
+201 Created	Resource successfully created
+202 Accepted	Request accepted for asynchronous processing
+400 Bad Request	Invalid request format/input
+404 Not Found	Requested resource not found
+409 Conflict	Conflict with existing state
+422 Unprocessable Entity	Request is syntactically valid but fails business validation
+500 Internal Server Error	Unexpected server-side failure
+503 Service Unavailable	Temporary downstream/system availability issue
+
+
+Do not return 500 simply because one business item in a batch failed.
+
+207 Multi-Status is technically available, but it originates from WebDAV and is less commonly used in general REST APIs. Use it only if it is part of the organization's API standards.
+Best 2-Minute Interview Answer
+There is not one fixed solution; it depends on whether the five requests are independent and whether the business allows partial success.
+
+If it is a bulk API and the requests are independent, my preferred approach is to return an item-level response showing the status of each request. For example, the overall result can be PARTIAL_SUCCESS, with total 5, success 4, and failed 1, along with the request ID and error details for the failed item.
+
+If they are five separate HTTP calls, every request gets its own HTTP response with an appropriate status code and a standard error structure.
+
+If the business requires all-or-nothing consistency, I would put the operations under the required transaction boundary and roll everything back if one mandatory operation fails.
+
+If processing is long-running, I would return 202 Accepted with a job or batch ID and provide a status API or callback mechanism.
+
+For high-volume distributed systems, I would consider Kafka or another event-driven approach with retry, dead-letter handling, idempotency, correlation IDs, logging, and monitoring.
+
+So before selecting the technical solution, I would first understand the business requirement around partial success, transaction consistency, processing time, retry behavior, and client expectations.
+
+Key Point for a 10-Year Experienced Candidate
+A strong senior-level answer should start with:
+"It depends on the business requirement, whether partial success is allowed, and what transaction boundary is required."
+
+This shows that the candidate is thinking beyond exception handling and considering:
+- Business consistency
+- API design
+- Scalability
+- Reliability
+- Failure recovery
+- Distributed systems
+- Production observability
