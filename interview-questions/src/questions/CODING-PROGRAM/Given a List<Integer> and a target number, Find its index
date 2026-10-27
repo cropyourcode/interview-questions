@@ -1,0 +1,45 @@
+Given a List<Integer> and a target number, how would you find its index?
+If there are multiple target number return highest index.
+Null value possible.
+
+Input List<Integer> iL = Arrays.asList(null,563, 234, 789, 234, 222, 234); Integer findNum = 234;
+Output 2
+
+============Top 5 solutions
+1)List.indexOf() (the idiomatic answer)
+int index = list.indexOf(target); // -1 if not found
+O(n) time, O(1)
+
+2)Manual loop
+int fo=-1;
+    int c=0;
+    for(int i=0; i< iL.size();i++){
+      if(Objects.equals(findNum, iL.get(i))){
+        c++;
+        fo=i;
+      }
+    }
+    return fo;
+O(n) time, O(1)
+
+3. Streams
+int index = IntStream.range(0, list.size())
+        .filter(i -> Objects.equals(list.get(i), target))
+        .findFirst()
+        .orElse(-1);
+O(n)
+
+4. Binary search (only if the list is sorted)
+java
+int index = Collections.binarySearch(list, target);
+if (index < 0) index = -1; // negative = not found (-(insertionPoint) - 1)
+O(log n)
+
+5. Precomputed HashMap (for repeated lookups)
+java
+Map<Integer, Integer> indexMap = new HashMap<>();
+for (int i = 0; i < list.size(); i++) {
+    indexMap.putIfAbsent(list.get(i), i); // keeps first occurrence
+}
+int index = indexMap.getOrDefault(target, -1);
+O(n) to build, then O(1)
