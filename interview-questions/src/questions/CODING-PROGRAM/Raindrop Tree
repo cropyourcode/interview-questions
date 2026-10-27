@@ -1,0 +1,4 @@
+Rainwater Trapping problem, which asks how much water can be trapped between bars of different heights after rainfall.
+Given an array of non-negative integers representing the heights of bars, where each bar has width 1, calculate how much rainwater can be trapped between the bars after rainfall.
+Input: int[] heights = {0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1};
+Output: 6

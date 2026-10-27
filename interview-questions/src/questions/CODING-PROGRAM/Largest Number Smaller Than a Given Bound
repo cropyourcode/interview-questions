@@ -1,0 +1,73 @@
+Q) Given a list of digits and a higher bound, find the largest number that can be formed using all the given
+digits exactly once such that the resulting number is strictly smaller than the given bound.
+Example
+Input:
+int[] digits = {1, 2, 5, 4};
+int bound = 2541;
+
+Output:
+2514
+
+========SOLUTION=============
+backtracking/permutation with pruning
+------------------------------------
+import java.util.Arrays;
+
+public class Main {
+    private static int max = -1;
+    public static void main(String[] args) {
+        int[] digits = {8, 7, 1};
+        int higherBound = 200;
+        boolean[] used = new boolean[digits.length];
+        findLargest(digits, used, 0, higherBound);
+        System.out.println("Largest number = " + max);
+    }
+
+    private static void findLargest(
+            int[] digits,
+            boolean[] used,
+            int current,
+            int higherBound) {
+
+        // All digits are used
+        boolean allUsed = true;
+
+        for (boolean value : used) {
+            if (!value) {
+                allUsed = false;
+                break;
+            }
+        }
+
+        if (allUsed) {
+            if (current < higherBound) {
+                max = Math.max(max, current);
+            }
+            return;
+        }
+
+        for (int i = 0; i < digits.length; i++) {
+
+            if (!used[i]) {
+
+                int next = current * 10 + digits[i];
+
+                // Pruning
+                if (next >= higherBound) {
+                    continue;
+                }
+
+                used[i] = true;
+
+                findLargest(
+                        digits,
+                        used,
+                        next,
+                        higherBound);
+
+                // Backtracking
+                used[i] = false;
+            }
+        }
+    }
+}

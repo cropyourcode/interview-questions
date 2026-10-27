@@ -1,0 +1,29 @@
+Q) Largest Number from Integer Array
+
+Problem Statement
+-----------------
+Given an array of non-negative integers, write a Java program that
+arranges the numbers so that, when concatenated, they form the largest
+possible number. Return the result as a String, since it may be too
+large for int or long.
+
+Examples
+--------
+Input : [10, 2]
+Output: "210"
+
+Input : [3, 30, 34, 5, 9]
+Output: "9534330"
+
+Input : [0, 0]
+Output: "0"
+
+
+====================================
+Solutions
+1. Custom comparator on Strings (Arrays.sort)
+2. Java 8 Streams
+3. PriorityQueue (max-heap) - #
+4. Manual merge sort with custom comparison - #
+5. Brute force permutations (to be rejected, O(n! * n)) - #
+

@@ -1,0 +1,22 @@
+Q)Given an English sentence, write a Java program to calculate the frequency of each character in the sentence.
+
+Example input:
+Java is awesome
+
+Expected output, preserving case and counting spaces:
+J = 1
+a = 3
+v = 1
+  = 2
+i = 1
+s = 2
+w = 1
+e = 2
+o = 1
+m = 1
+
+==============
+Using Java Streams Time: \(O(n)\) Space: \(O(k)\).
+Using LinkedHashMap Time: \(O(n)\) Space: \(O(k)\).
+Using HashMap Time: \(O(n)\) Space: \(O(k)\).
+Brute force using nested loops Time: \(O(n^2)\) Space: \(O(k)\)
