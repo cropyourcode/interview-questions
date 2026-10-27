@@ -1,0 +1,76 @@
+Java / Coding
+  Given a List<Integer> and a target number, how would you find its index?
+  If the target number occurs multiple times, return the second occurrence index; if it occurs only once, return the first occurrence index. How would you implement this?
+Java Multithreading
+  What is the volatile keyword in Java?
+  Why do you use volatile?
+  What are the limitations of volatile?
+  What is a synchronized block, and how does it work when multiple threads access the same block?
+  What is reentrancy / a reentrant lock in Java?
+  How is synchronized different from ReentrantLock?
+Spring Transaction Management
+  What is a transaction?
+  What are the limitations of transactions?
+  In what situations might @Transactional not work as expected?
+  Suppose you update Table A and then perform four or five validations/downstream operations. What happens if an exception occurs later?
+  How does @Transactional behave when an unchecked exception occurs?
+  How does it behave when a checked exception occurs?
+  What happens if an earlier database operation has already been committed before a later failure?
+  What are Spring transaction propagation types?
+  What does transaction propagation mean?
+  What are the different values that can be configured using:
+  Explain REQUIRED.
+  Explain REQUIRES_NEW.
+  Explain NESTED.
+  What is the difference between REQUIRED, REQUIRES_NEW, and NESTED?
+  What are SUPPORTS, MANDATORY, NOT_SUPPORTED, and NEVER?
+JPA / Hibernate
+  What entity relationships are available in JPA/Hibernate?
+  Explain:
+  OneToOne
+  OneToMany
+  ManyToOne
+  ManyToMany
+  What is a unidirectional relationship?
+  What is a bidirectional relationship?
+  What is the difference between unidirectional and bidirectional relationships?
+  Does bidirectional mapping mean foreign keys have to exist in both database tables?
+  What are the different fetch types available in JPA?
+  Explain FetchType.LAZY.
+  Explain FetchType.EAGER.
+  What is the default fetch type?
+  Is the default fetch type LAZY for all JPA relationships?
+  What are the default fetch types for OneToOne, ManyToOne, OneToMany, and ManyToMany?
+Generative AI / Copilot / MCP
+  Have you developed an AI agent, or are you currently providing this functionality through Copilot?
+  How are you currently using Copilot in your development process?
+  Are you using RAG in your application?
+  Are you working with MCP?
+  What MCPs are you currently using?
+  How are you using the Ping MCP / MCP integration?
+RAG
+  Can you explain a simple RAG pipeline?
+  How does a RAG pipeline work from document ingestion to generating an answer?
+  What are embeddings and where are they stored in a RAG architecture?
+  How does the application retrieve relevant information from a vector database before sending it to the LLM?
+Agentic AI
+  Explain a simple Agentic AI pipeline.
+  How is an Agentic AI pipeline different from a normal RAG pipeline?
+  How does an AI agent decide which tool/API/MCP to invoke?
+  What is the reasoning → tool execution → observation → next action flow in Agentic AI?
+Prompt Engineering / LLM Concepts
+  What is prompt engineering?
+  What are the important components of a good prompt?
+  What is Chain of Thought?
+  How does Chain of Thought help an LLM solve complex problems?
+  How is Chain of Thought different from Agentic AI?
+  What is prompt injection?
+  What is the difference between direct and indirect prompt injection?
+  Why is prompt injection particularly dangerous in RAG or Agentic AI systems?
+  How would you protect an AI application from prompt injection?
+Main areas covered
+  This interview was therefore heavily focused on six areas:
+
+Java concurrency → Spring transactions → JPA/Hibernate → Copilot/MCP → RAG/Agentic AI → LLM security and prompting.
+
+  For a senior Java role, the particularly important questions from this session are volatile limitations, transaction rollback behavior, propagation, JPA mapping/fetching, RAG pipeline, Agentic AI pipeline, MCP, and prompt injection
