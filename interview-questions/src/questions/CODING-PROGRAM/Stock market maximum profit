@@ -1,0 +1,141 @@
+You are given an integer array representing the stock price of a company on each day. The index represents the day, and the value represents the stock price.
+
+Write a Java program to find the maximum profit possible by buying the stock on one day and selling it on a later day.
+
+Rules:
+- You must buy before you sell.
+- You can complete only one buy-and-sell transaction.
+- If no profit is possible, return 0.
+- Optimize the solution for time and space complexity.
+Example 1
+Input: prices = [7, 1, 5, 3, 6, 4]
+Output: 5
+Explanation: Buy at price 1 on day 2 and sell at price 6 on day 5. Maximum profit = 6 - 1 = 5.
+
+Example 2
+Input: prices = [7, 6, 4, 3, 1]
+Output: 0
+
+======
+Explanation: Prices keep decreasing, so no profitable transaction is possible.
+
+
+=====Solutions=====
+Approach 1: Brute force
+Check every possible pair of buying and selling days, ensuring the selling day comes after the buying day.
+public static int maxProfit(int[] prices) {
+    int maxProfit = 0;
+
+    for (int i = 0; i < prices.length - 1; i++) {
+        for (int j = i + 1; j < prices.length; j++) {
+            int profit = prices[j] - prices[i];
+            maxProfit = Math.max(maxProfit, profit);
+        }
+    }
+
+    return maxProfit;
+}
+
+
+- Time complexity: \(O(n^2)\)
+- Auxiliary space: \(O(1)\)
+
+Approach 2: Optimal solution — one pass
+The key insight is that, for each selling day, we only need to know the minimum stock price seen before that day. This allows us to solve the problem in linear time.
+Intervue+1
+
+
+public class StockMarket {
+
+    public static int maxProfit(int[] prices) {
+        if (prices == null || prices.length < 2) {
+            return 0;
+        }
+
+        int minPrice = prices[0];
+        int maxProfit = 0;
+
+        for (int i = 1; i < prices.length; i++) {
+            int currentPrice = prices[i];
+
+            int profit = currentPrice - minPrice;
+            maxProfit = Math.max(maxProfit, profit);
+
+            minPrice = Math.min(minPrice, currentPrice);
+        }
+
+        return maxProfit;
+    }
+
+    public static void main(String[] args) {
+        int[] prices = {7, 1, 5, 3, 6, 4};
+
+        System.out.println(maxProfit(prices));
+    }
+}
+
+
+
+Output:
+5
+
+
+Dry run
+For the input [7, 1, 5, 3, 6, 4]:
+Day (index)	Price	Minimum price so far	Profit if sold today	Maximum profit
+0	7	7	—	0
+1	1	1	-6	0
+2	5	1	4	4
+3	3	1	2	4
+4	6	1	5	5
+5	4	1	3	5
+
+The maximum profit is 5, obtained by buying at 1 and selling at 6.
+
+Complexity
+- Time: \(O(n)\), because each price is processed once.
+- Auxiliary space: \(O(1)\),
+
+4. Advanced follow-up: Return the buy and sell days //TODO
+For a senior candidate, ask them to return the buying day, selling day, and maximum profit rather than just the profit.
+
+For the same input, the result could be:
+Buy day: 1
+Sell day: 4
+Maximum profit: 5
+
+
+These are zero-based day indexes.
+
+A candidate can implement this by maintaining minPrice, buyDay, sellDay, and maxProfit in the same traversal.
+
+========
+5. Additional stock market coding questions
+Level 1 — One transaction
+
+Find the maximum profit from one buy and one later sell.
+Greedy · O(n)
+
+
+
+
+Level 2 — Unlimited transactions
+
+Find the maximum total profit when multiple non-overlapping transactions are allowed.
+Greedy · O(n)
+
+
+
+
+Level 3 — At most two transactions
+
+Maximize profit using at most two buy-and-sell pairs.
+Dynamic programming
+
+
+
+
+Level 4 — Transaction fee and cooldown
+
+Optimize profit when every sale incurs a fee or selling prevents buying on the next day.
+State-based DP
