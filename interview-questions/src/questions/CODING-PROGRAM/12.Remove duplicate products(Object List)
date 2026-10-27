@@ -1,0 +1,146 @@
+You are given a List<Product> containing duplicate product entries. Write Java code to remove the duplicates.
+
+Assume the Product object contains fields such as:
+
+productId
+productName
+price
+lastUpdatedTime
+
+Handle the following three cases:
+
+Case 1: Keep the first occurrence
+Two products are considered duplicates if they have the same productId.
+Remove duplicate products and retain the first occurrence of each product.
+Example:
+Input:
+
+101 - Laptop
+102 - Mobile
+101 - Laptop
+103 - Tablet
+102 - Mobile
+Expected Output:
+101 - Laptop
+102 - Mobile
+103 - Tablet
+Ans:
+import java.util.*;
+
+public class ProductCleanup {
+
+    public static List<Product> removeDuplicates(List<Product> products) {
+
+        if (products == null || products.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        Set<Long> seenProductIds = new HashSet<>();
+
+        return products.stream()
+                .filter(Objects::nonNull)
+                .filter(product -> seenProductIds.add(product.getId()))
+                .toList();
+    }
+}
+
+
+Case 2: Keep the latest occurrence
+
+If multiple products have the same productId, retain the latest product entry and remove the older duplicate entries.
+
+Example:
+
+Input:
+
+101 - Laptop - 50000
+102 - Mobile - 20000
+101 - Laptop - 55000
+103 - Tablet - 30000
+
+Expected Output:
+
+101 - Laptop - 55000
+102 - Mobile - 20000
+103 - Tablet - 30000
+
+Explain how you would handle this using Java Collections or Streams.
+Ans:
+Map<Long, Product> uniqueProducts = products.stream()
+        .filter(Objects::nonNull)
+        .collect(Collectors.toMap(
+                Product::getId,
+                product -> product,
+                (oldProduct, newProduct) -> newProduct,
+                LinkedHashMap::new
+        ));
+
+Case 3: Remove duplicates based on the complete Product object
+
+Consider two products duplicates only when all relevant fields of the Product object are equal.
+
+Implement the solution using equals() and hashCode() and remove duplicate objects using Java Streams or Collections.
+Ans:
+List<Product> uniqueProducts = products.stream()
+        .distinct()
+        .toList();
+
+--------------
+Also explain:
+Which collection would you use and why?
+How does HashSet detect duplicates?
+When would you use HashSet vs LinkedHashMap?
+What are the time and space complexities?
+How would your approach change if insertion order must be preserved?
+
+1. Keep first occurrence
+2. Keep latest occurrence
+3. Duplicate based on equals() / hashCode()
+4. Duplicate based on composite business key
+5. Merge duplicate records based on business rules
+
+=====Skeleton Code============
+import java.util.*;
+import java.util.stream.Collectors;
+
+class Product {
+    private int id;
+    private String name;
+    private double price;
+
+    public Product(int id, String name, double price) {
+        this.id = id;
+        this.name = name;
+        this.price = price;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    @Override
+    public String toString() {
+        return id + " - " + name + " - " + price;
+    }
+}
+
+public class RemoveDuplicateProducts {
+
+    public static void main(String[] args) {
+
+        List<Product> products = Arrays.asList(
+                new Product(1, "Laptop", 50000),
+                new Product(2, "Mobile", 20000),
+                new Product(1, "Laptop", 50000),
+                new Product(3, "Tablet", 30000),
+                new Product(2, "Mobile", 20000)
+        );
+
+        List<Product> uniqueProducts = 
+               ?
+        uniqueProducts.forEach(System.out::println);
+    }
+}
+
+=====SOULTIONS===============
+
