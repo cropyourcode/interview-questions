@@ -1,0 +1,113 @@
+
+Do you know how multiple transactions can update the same database record without compromising data consistency?
+
+Understanding Optimistic Locking and Pessimistic Locking is essential for Java developers working with Spring Boot, JPA, Hibernate, and Microservices.
+
+Optimistic Lock vs Pessimistic Lock
+
+Two different approaches to handle concurrent access to data
+
+Optimistic Locking
+
+Assumes low conflict between transactions
+
+What is Optimistic Locking?
+Optimistic locking assumes that multiple transactions can read and update data without locking. It checks for conflicts at the time of update using a version or timestamp.
+
+Product Table
+
+ID	NAME	PRICE	VERSION
+1	Laptop	50000	1
+
+Diagram: Read Data (version = 1) → Update Data (if version = 1) → Update Successful (version = 2), or Version Mismatch (OptimisticLockException).
+
+How It Works?
+
+Read the data along with a version number.
+Make changes to the data.
+At update time, check if the version is still the same.
+If the version matches, update the data and increment the version. If not, throw an exception.
+
+Example (JPA - Optimistic Locking)
+
+java
+@Entity
+public class Product {
+    @Id
+    private Long id;
+
+    @Version    // Used for optimistic locking
+    private Long version;
+
+    // other fields
+}
+
+Use Cases
+
+Read-heavy applications
+Low chance of data conflicts
+Web applications
+Scenarios where conflict handling is acceptable (retry mechanism)
+Pessimistic Locking
+
+Assumes high conflict between transactions
+
+What is Pessimistic Locking?
+Pessimistic locking assumes that multiple transactions may try to modify the same data. It locks the data while it is being read, preventing other transactions from accessing it.
+
+Product Table (Locked)
+
+ID	NAME	PRICE	STATUS
+1	Laptop	50000	Locked
+
+Diagram: Transaction 1 Reads Data (LOCKED); Transaction 2 (Waits); Transaction 3 (Waits); then Update Data and Release Lock.
+
+How It Works?
+
+Acquire a database lock (e.g., SELECT ... FOR UPDATE).
+Other transactions are blocked until the lock is released.
+Perform the update.
+Release the lock after the transaction is completed.
+
+Example (JPA - Pessimistic Locking)
+
+java
+@Transactional
+public Product getProductForUpdate(Long id) {
+    return entityManager.find(
+        Product.class,
+        id,
+        LockModeType.PESSIMISTIC_WRITE  // Locks for write
+    );
+}
+
+Use Cases
+
+Write-heavy applications
+High chance of data conflicts
+Banking and financial systems
+Inventory management
+When data consistency is critical
+Key Differences
+Aspect	Optimistic Locking	Pessimistic Locking
+Approach	Assumes low conflict	Assumes high conflict
+Lock	No lock while reading	Locks the data while reading
+Conflict Handling	Uses version/timestamp	Blocks other transactions
+Performance	Better (no locking overhead)	May reduce performance
+Use Case	Read-heavy, low conflict	Write-heavy, high conflict
+Example	@Version in JPA	LockModeType.PESSIMISTIC_WRITE
+When to Use Which?
+
+Use Optimistic Locking if:
+
+Data conflicts are rare.
+Your application is read-heavy.
+You want better performance.
+You can handle version conflicts (e.g., retry the transaction).
+
+Use Pessimistic Locking if:
+
+Data conflicts are frequent.
+Data consistency is critical.
+Your application is write-heavy.
+You want to prevent other transactions from accessing it.
