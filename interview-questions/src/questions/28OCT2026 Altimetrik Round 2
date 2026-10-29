@@ -1,0 +1,93 @@
+How many APIs/services are there across the project repositories?
+- Follow-up: How many are specifically in the Process Orchestration repository?
+
+Which cloud platform and cloud services are you using in your project?
+- Azure
+- AKS
+- Azure Key Vault
+- Database/query-related Azure tools
+
+What tools do you use for logs and metrics?
+- Kibana
+- Observability platform/module
+- Follow-up around how production issues are monitored and diagnosed.
+
+Do you use feature flags in your application?
+- How do you gradually roll out a feature?
+- How do you do percentage-based rollout such as 1%, 5%, 10%, etc.?
+- How do you do A/B testing?
+- How do you roll back or disable a feature if there is an issue?
+
+How do you test a new feature with a small group of users?
+- Example: first enable for 50 users.
+- How would you later expose it to a larger user base, such as 1 million users?
+- How do you measure user impact during gradual rollout?
+
+Have you worked with both Maven and Gradle?
+- Which one are you using currently?
+- What is the difference between Maven and Gradle?
+- What practical experience do you have with both?
+
+In a large ecosystem with 500+ microservices, how do you restrict service-to-service communication?
+- Example: only Checkout, Business, or another approved service should be able to call Payment Service.
+- How do you prevent every microservice from calling every other microservice?
+- Possible discussion around service authorization, network policies, service mesh, mTLS, OAuth, etc.
+
+How do you choose between SQL and NoSQL databases?
+- What factors do you consider before selecting one?
+- When would you prefer SQL?
+- When would you prefer NoSQL?
+
+What is CAP theorem?
+- What are Consistency, Availability, and Partition Tolerance?
+- How do you choose between CP and AP systems?
+
+Fault tolerance vs resilience
+- Scenario: You have five instances, two go down, but the remaining three continue serving users without degradation.
+- Is this an example of fault tolerance or resilience?
+- What is the difference between the two?
+
+What are the benefits of Spring Boot compared with the traditional/legacy Spring Framework?
+- Why do we prefer Spring Boot?
+- What advantages do auto-configuration, starter dependencies, embedded servers, and Actuator provide?
+
+When would you use RabbitMQ and when would you use Kafka?
+- What are the differences?
+- Which one is appropriate for messaging vs event streaming?
+- How do you decide based on use case?
+
+What is the relationship between Kafka partitions and consumer/container count?
+- How do you decide the number of consumers?
+- How many containers or pods should be deployed based on the number of partitions?
+- What happens when consumers are greater than partitions?
+- How does Spring Kafka concurrency relate to pod/container count?
+- What happens when one consumer/container goes down?
+
+In Spring Boot, is embedded Tomcat a web server or application server?
+- What exactly is Tomcat?
+- What is the difference between a Servlet container/web server and a full application server?
+
+How do you work with third-party integrations in the payment domain?
+- The discussion included payment providers such as Braintree, PayU, Razorpay, card networks, and external testing providers.
+- How are external partner dependencies handled?
+- How are payment-related production issues investigated?
+
+How do you perform end-to-end payment testing with third-party providers?
+- Testing with cards from different countries.
+- OTP-based payment flows.
+- Cancellation/refund testing.
+- Validating that the money returns to the cardholder.
+
+What is your technology stack in the current project?
+- Backend stack
+- Cloud platform
+- Frontend technologies
+- Logging/observability
+- Feature flagging
+- Third-party integrations
+
+How does your in-house feature-flagging solution work?
+- Internal testing first.
+- Gradual rollout to external users.
+- Percentage-based exposure.
+- Monitoring before increasing rollout.
