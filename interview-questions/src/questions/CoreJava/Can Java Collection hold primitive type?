@@ -1,0 +1,75 @@
+Not directly; use wrappers.
+
+In Java, Collections cannot store primitive data types directly. They store objects, so we use Wrapper Classes to
+represent primitive data types.
+
+Java provides automatic conversion through Autoboxing and Unboxing.
+1. Primitive types vs Wrapper classes
+Primitive type	Wrapper class
+int	Integer
+long	Long
+double	Double
+float	Float
+char	Character
+boolean	Boolean
+short	Short
+byte	Byte
+
+2. Example: Collection cannot directly store primitives
+List<int> numbers = new ArrayList<>(); // Compilation error
+
+
+This is invalid because Java generics support reference types, not primitive types.
+3. Correct approach using Wrapper classes
+import java.util.*;
+
+public class WrapperExample {
+
+    public static void main(String[] args) {
+
+        List<Integer> numbers = new ArrayList<>();
+
+        numbers.add(10);
+        numbers.add(20);
+        numbers.add(30);
+
+        System.out.println(numbers);
+    }
+}
+
+
+Here, Integer is the wrapper class for primitive int.
+4. Autoboxing and Unboxing
+Autoboxing: Automatic conversion from primitive to wrapper object.
+int number = 100;
+
+Integer integerObject = number; // Autoboxing
+
+
+Unboxing: Automatic conversion from wrapper object to primitive.
+Integer integerObject = 100;
+
+int number = integerObject; // Unboxing
+
+
+5. Real-world interview example
+List<Integer> numbers = new ArrayList<>();
+
+numbers.add(10);  // int → Integer (Autoboxing)
+numbers.add(20);
+numbers.add(30);
+
+int result = numbers.get(0); // Integer → int (Unboxing)
+
+System.out.println(result); // 10
+
+
+Interview-ready answer:
+
+"Java Collections work with objects rather than primitive data types. Therefore, we use wrapper classes such as
+Integer, Double and Boolean. Java provides autoboxing and unboxing to automatically convert between primitives and
+their corresponding wrapper objects."
+
+One additional point for experienced Java developers: Wrapper objects consume more memory than primitive values and
+introduce boxing/unboxing overhead. For performance-sensitive numerical operations, primitive arrays such as int[]
+can be more efficient than List<Integer>.

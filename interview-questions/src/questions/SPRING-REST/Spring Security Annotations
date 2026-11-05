@@ -1,0 +1,504 @@
+Spring Security Annotations.
+
+
+1. What is Spring Security?
+Spring Security is the security framework commonly used with Spring
+applications. It provides:
+- Authentication: verifies who the caller is.
+- Authorization: decides what an authenticated (or anonymous)
+  caller is allowed to do.
+- Protection against common attacks: including CSRF and
+  session-fixation concerns, plus security headers and secure request
+  handling.
+- Integration: supports form login, HTTP Basic, OAuth 2.0, OpenID
+  Connect, JWT-based resource servers, LDAP, and custom authentication
+  mechanisms.
+A typical request flow is:
+1. A client sends an HTTP request.
+2. The servlet filter chain processes it.
+3. Authentication filters or a configured authentication mechanism
+   establish the caller's identity.
+4. The authenticated identity is stored in the SecurityContext.
+5. Request-level authorization rules decide whether the URL can be
+   accessed.
+6. If the request reaches a secured service method, method-level
+   authorization may run as well.
+7. The controller/service executes only if the applicable checks pass.
+Important: Authentication and authorization are different. A valid
+JWT, for example, establishes an identity; it does not automatically
+mean that the caller may access every endpoint.
+2. The main annotations
+2.1 @EnableWebSecurity
+Purpose: Enables Spring Security's web-security integration and
+allows the application to configure web security.
+
+In a Spring Boot application, security auto-configuration already
+provides much of the default setup. An explicit @EnableWebSecurity is
+often not necessary when using Boot's standard configuration, but it may
+be used on a configuration class when you want to make the web-security
+setup explicit or customize it.
+
+Example:
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    @Bean
+    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/public/**").permitAll()
+                .requestMatchers("/admin/**").hasRole("ADMIN")
+                .anyRequest().authenticated()
+            )
+            .httpBasic(Customizer.withDefaults());
+
+        return http.build();
+    }
+}
+Senior-level point: In modern Spring Security, the recommended
+configuration style is to expose a SecurityFilterChain bean rather
+than extend the old WebSecurityConfigurerAdapter. That adapter was
+deprecated and removed from current Spring Security usage.
+2.2 @EnableMethodSecurity
+Purpose: Enables method-level authorization annotations such as
+@PreAuthorize, @PostAuthorize, and (when enabled) @Secured and
+JSR-250 annotations.
+
+Example:
+@Configuration
+@EnableMethodSecurity(
+    securedEnabled = true,
+    jsr250Enabled = true
+)
+public class MethodSecurityConfig {
+}
+By default, pre/post annotations are enabled. securedEnabled and
+jsr250Enabled opt in to the corresponding annotation families.
+
+Important distinction: @EnableWebSecurity configures web security;
+@EnableMethodSecurity enables authorization checks on Spring-managed
+methods. They solve related but different problems.
+2.3 @PreAuthorize
+Purpose: Evaluates an authorization expression before a method
+executes. It is generally the most flexible and commonly recommended
+method-security annotation.
+
+Example --- role-based authorization:
+@Service
+public class UserService {
+
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<User> getAllUsers() {
+        return userRepository.findAll();
+    }
+}
+Example --- permission or ownership check:
+@PreAuthorize("hasAuthority('USER_READ')")
+public User getUser(Long userId) {
+    return userRepository.findById(userId)
+        .orElseThrow(() -> new UserNotFoundException(userId));
+}
+@PreAuthorize("#userId == authentication.principal.userId or hasRole('ADMIN')")
+public User getUserProfile(Long userId) {
+    return userRepository.findById(userId)
+        .orElseThrow(() -> new UserNotFoundException(userId));
+}
+Common expressions:
+  Expression                                       Meaning
+  isAuthenticated()                              Caller is authenticated
+
+  hasRole('ADMIN')                               Caller has role ROLE_ADMIN by
+default
+
+  hasAnyRole('ADMIN', 'SUPPORT')                 Caller has at least one listed role
+
+  hasAuthority('ORDER_READ')                     Caller has the exact authority
+
+  hasAnyAuthority('ORDER_READ', 'ORDER_WRITE')   Caller has at least one listed
+authority
+
+  principal                                      Current authenticated principal
+
+  authentication                                 Current Authentication object
+#parameterName                                 A method argument, when parameter
+names are available/configured
+hasRole vs hasAuthority:
+- hasRole("ADMIN") applies the conventional ROLE_ prefix, so it
+  checks for ROLE_ADMIN by default.
+- hasAuthority("ORDER_READ") checks the exact authority string.
+- Use roles for broad job functions and authorities/permissions for
+  finer-grained capabilities. Be consistent in how authorities are
+  created and checked.
+When to use: Use @PreAuthorize when access depends on roles,
+permissions, ownership, method arguments, or a combination of
+conditions.
+2.4 @PostAuthorize
+Purpose: Evaluates an authorization expression after the method
+has executed. The returned object is available as returnObject.
+
+Example:
+@PreAuthorize("isAuthenticated()")
+@PostAuthorize("returnObject.ownerUsername == authentication.name or hasRole('ADMIN')")
+public Document getDocument(Long documentId) {
+    return documentRepository.findById(documentId)
+        .orElseThrow(() -> new DocumentNotFoundException(documentId));
+}
+This can be useful when the authorization decision depends on data that
+is only known after retrieving the object.
+
+Caution: The method has already run before the post-authorization
+check. Do not rely on @PostAuthorize to protect operations that cause
+side effects, such as updating records, transferring money, or sending
+messages. Prefer checking permission before performing such operations.
+For reads, consider whether loading the object before denying access is
+acceptable.
+2.5 @Secured
+Purpose: Restricts method access to users with one of the specified
+security roles/authorities. It is a simpler, role-oriented alternative
+to @PreAuthorize.
+
+Example:
+@Secured({"ROLE_ADMIN", "ROLE_MANAGER"})
+public void approveOrder(Long orderId) {
+    // approval logic
+}
+Enable it using:
+@EnableMethodSecurity(securedEnabled = true)
+Limitations: @Secured does not support the rich SpEL expressions
+available with @PreAuthorize. For new code requiring ownership or
+argument-based rules, @PreAuthorize is usually a better fit.
+2.6 @RolesAllowed
+Purpose: JSR-250 annotation that allows a method to be invoked by
+callers with one of the listed roles.
+
+Example:
+@RolesAllowed({"ADMIN", "MANAGER"})
+public void updateEmployee(Employee employee) {
+    // update logic
+}
+Enable JSR-250 support:
+@EnableMethodSecurity(jsr250Enabled = true)
+Role naming and prefix handling should be checked against the
+application's granted authorities and Spring Security configuration. Do
+not assume that every annotation family handles role names identically
+without verifying the configured role prefix.
+2.7 @PermitAll
+Purpose: JSR-250 annotation that permits any caller to invoke the
+annotated method, including an unauthenticated caller, subject to the
+rest of the application's security configuration.
+
+Example:
+@PermitAll
+public Product getPublicProduct(Long productId) {
+    return productRepository.findById(productId)
+        .orElseThrow(() -> new ProductNotFoundException(productId));
+}
+Enable with @EnableMethodSecurity(jsr250Enabled = true).
+
+Caution: Use this deliberately. A method-level permit rule does not
+mean that every surrounding URL, filter, network layer, or other
+security control is bypassed.
+2.8 @DenyAll
+Purpose: JSR-250 annotation that denies invocation to every caller.
+
+Example:
+@DenyAll
+public void legacyAdministrativeOperation() {
+    // deliberately inaccessible
+}
+Enable with @EnableMethodSecurity(jsr250Enabled = true).
+
+It can be useful as a deliberate deny rule, for example while disabling
+a legacy operation. In most cases, removing an unused method or endpoint
+is preferable to leaving dead code exposed.
+2.9 @AuthenticationPrincipal
+Purpose: Injects the current authenticated principal into a
+controller method argument. It avoids manually reading the
+SecurityContextHolder in ordinary controller code.
+
+Example:
+@GetMapping("/me")
+public UserProfile getMyProfile(
+        @AuthenticationPrincipal CustomUserPrincipal principal) {
+    return userService.getProfile(principal.userId());
+}
+A typical custom principal might be:
+public record CustomUserPrincipal(
+        Long userId,
+        String username
+) implements UserDetails {
+    // Implement the remaining UserDetails methods as required.
+}
+The actual principal type depends on the authentication mechanism. With
+JWT resource-server authentication, for example, the principal may be a
+Jwt or another configured representation. Match the argument type to
+the principal your application actually uses.
+
+Caution: Handle anonymous requests and nullable principals
+appropriately if the endpoint permits anonymous access.
+3. Complete example: request security plus method security
+The following example shows both layers in a Spring Boot application. It
+uses HTTP Basic only to keep the example small; a production API may use
+OAuth 2.0 resource-server JWT authentication or another suitable
+mechanism.
+@Configuration
+@EnableWebSecurity
+@EnableMethodSecurity
+public class SecurityConfig {
+
+    @Bean
+    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/public/**").permitAll()
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                .anyRequest().authenticated()
+            )
+            .httpBasic(Customizer.withDefaults());
+
+        return http.build();
+    }
+}
+Service:
+@Service
+public class OrderService {
+
+    @PreAuthorize("hasAuthority('ORDER_READ')")
+    public Order getOrder(Long orderId) {
+        return orderRepository.findById(orderId)
+            .orElseThrow(() -> new OrderNotFoundException(orderId));
+    }
+
+    @PreAuthorize("hasRole('ADMIN') or @orderAuthorization.isOwner(#orderId, authentication)")
+    public void cancelOrder(Long orderId) {
+        // Validate the order state and perform the cancellation.
+    }
+}
+The orderAuthorization bean represents application-specific ownership
+logic. Keep complex authorization rules in a well-tested component
+rather than writing very long SpEL expressions.
+4. Request-level security vs method-level security
+  Aspect                  Request-level security  Method-level security
+  Configured through      SecurityFilterChain   @EnableMethodSecurity and method
+annotations
+
+  Protects                URL/request patterns    Spring-managed method invocations
+
+  Example                 /admin/** requires    @PreAuthorize("hasRole('ADMIN')")
+ADMIN
+
+  Best for                Broad endpoint rules    Business rules, ownership,
+fine-grained permissions
+Reuse                   Usually tied to HTTP    Can protect service methods used by
+request patterns        multiple entry points
+Recommended approach: Use request-level rules as the first security
+boundary and method-level rules to protect sensitive business
+operations. Do not assume that hiding a button in the UI or securing
+only a controller endpoint is sufficient.
+5. Important implementation details a senior developer should know
+5.1 Method security is proxy-based
+Spring method security is commonly implemented using Spring AOP
+proxies/interceptors. A call that goes through the Spring proxy can
+trigger the authorization check.
+
+A common pitfall is self-invocation:
+@Service
+public class ReportService {
+
+    public void generate() {
+        exportSensitiveReport(); // Direct call within the same object.
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    public void exportSensitiveReport() {
+        // ...
+    }
+}
+The internal call from generate() to exportSensitiveReport()
+normally does not pass through the Spring proxy, so the method-security
+interceptor may not run for that call. Put the secured method on another
+Spring bean or redesign the call so it crosses the proxy boundary. Avoid
+relying on self-invocation for security enforcement.
+5.2 Secure service-layer operations, not only controllers
+A service method may be called by a REST controller, scheduled job,
+message listener, or another service. Protecting important business
+operations at the service layer helps keep authorization rules close to
+the operation.
+
+Still, choose the right boundary: scheduled jobs and message consumers
+may need a deliberate service identity or authorization strategy rather
+than assuming an HTTP user's context exists.
+5.3 Use least privilege
+Grant only the roles and permissions needed for a user or service to
+perform its job. Avoid giving broad ADMIN access just to make an
+integration work.
+5.4 Return appropriate HTTP responses
+For a typical HTTP API:
+- 401 Unauthorized: authentication is missing or invalid (despite
+  the historical wording, this means the caller is not successfully
+  authenticated).
+- 403 Forbidden: the caller is authenticated but is not allowed to
+  perform the operation.
+The exact response can be customized through authentication entry points
+and access-denied handlers.
+5.5 Do not confuse CORS and authorization
+CORS controls which browser origins may make certain cross-origin
+requests. It is not a replacement for authentication or authorization. A
+non-browser client is not protected by CORS.
+5.6 CSRF depends on the authentication and client model
+For browser-based applications that authenticate using cookies or
+sessions, CSRF protection is important. Stateless APIs using bearer
+tokens in the Authorization header may have a different CSRF threat
+model. Do not disable CSRF blindly; make the decision based on how
+credentials are stored and sent.
+5.7 Test security rules
+Test both allowed and denied cases. Spring Security's test support
+includes @WithMockUser and request post-processors such as user()
+and jwt() (for relevant test setups).
+
+Example:
+@Test
+@WithMockUser(roles = "ADMIN")
+void adminCanReadAllUsers() {
+    userService.getAllUsers();
+}
+
+@Test
+@WithMockUser(roles = "USER")
+void normalUserCannotReadAllUsers() {
+    assertThrows(AccessDeniedException.class,
+        () -> userService.getAllUsers());
+}
+Depending on whether the test invokes a proxied service directly or
+exercises the HTTP layer, configure the test context appropriately. For
+MVC tests, use Spring Security's MockMvc integration and assert the HTTP
+status as well.
+6. Quick comparison of the annotations
+  Annotation                   When the check    Main use                    Enablement
+happens
+  @EnableWebSecurity         Configuration     Web-security                Used on configuration
+time              integration/configuration   when explicit web setup
+is needed; often
+unnecessary with Boot
+defaults
+
+  @EnableMethodSecurity      Configuration     Enables method              Add to configuration
+time              authorization
+
+  @PreAuthorize              Before method     Flexible roles,             Enabled by default with
+execution         authorities, ownership and  @EnableMethodSecurity
+expressions
+
+  @PostAuthorize             After method      Check returned object's     Enabled by default with
+execution         properties                  @EnableMethodSecurity
+
+  @Secured                   Before method     Simple role-based method    securedEnabled = true
+execution         restriction
+
+  @RolesAllowed              Before method     JSR-250 role restriction    jsr250Enabled = true
+execution
+
+  @PermitAll                 Before method     Permit all callers at       jsr250Enabled = true
+execution         method level
+
+  @DenyAll                   Before method     Deny all callers at method  jsr250Enabled = true
+execution         level
+@AuthenticationPrincipal   Argument          Access current principal in Spring Security web
+resolution        controller                  integration
+7. Common interview questions and strong answers
+Q1. What is the difference between authentication and authorization?
+Answer: Authentication establishes the identity of the caller;
+authorization checks whether that identity has permission to perform a
+particular action or access a resource. A user can be authenticated and
+still receive 403 Forbidden because they lack the required permission.
+Q2. What is the difference between @PreAuthorize and @PostAuthorize?
+Answer: @PreAuthorize evaluates the expression before the method
+body runs, so it is suitable for preventing an unauthorized operation.
+@PostAuthorize evaluates after the method returns and exposes the
+result as returnObject; it is useful when authorization depends on
+returned data, but it should not be used as the only protection for
+operations with side effects.
+Q3. What is the difference between hasRole and hasAuthority?
+Answer: hasRole("ADMIN") checks for ROLE_ADMIN by default
+because Spring Security applies the configured role prefix.
+hasAuthority("ORDER_READ") checks the exact authority. I use roles for
+broad access categories and authorities for fine-grained permissions,
+with a consistent naming strategy.
+Q4. Is @EnableWebSecurity enough to activate @PreAuthorize?
+Answer: No. Web security and method security are separate. I enable
+method authorization using @EnableMethodSecurity. In modern Spring
+Security, pre/post annotations are enabled by default once method
+security is enabled.
+Q5. Why might @PreAuthorize not execute?
+Answer: I would check that method security is enabled, the target is
+a Spring-managed bean, the call passes through the Spring proxy, and the
+correct annotation family is enabled. A common cause is self-invocation,
+where one method calls another secured method on the same object without
+crossing the proxy.
+Q6. Should authorization be implemented in the controller or service?
+Answer: Request-level authorization belongs in the security filter
+chain for broad URL rules. Fine-grained business authorization should
+also be enforced at the service boundary so it applies regardless of
+whether the operation is invoked through REST, messaging, a scheduled
+process, or another internal caller. The design must account for
+non-HTTP callers explicitly.
+Q7. What happens when an authenticated user lacks a required role?
+Answer: The authorization check denies access. In an HTTP request,
+Spring Security normally translates this to 403 Forbidden for an
+authenticated user. If authentication itself is missing or invalid, the
+usual response is 401 Unauthorized. Exception handling can customize
+these responses.
+Q8. How would you secure an endpoint so a user can read only their own record, while an admin can read any record?
+Answer: I would enforce ownership at the service layer using a rule
+such as:
+@PreAuthorize("#userId == authentication.principal.userId or hasRole('ADMIN')")
+public User getUser(Long userId) {
+    // Fetch and return user.
+}
+I would verify that the principal actually exposes userId, test both
+owner and non-owner cases, and ensure the admin role mapping is correct.
+For complex rules, I would delegate to a dedicated authorization bean.
+Q9. Does @PostAuthorize prevent the method from running?
+Answer: No. The method runs first; the returned value is then
+checked. Therefore, it is not appropriate as the sole protection for
+state-changing or externally visible side effects.
+Q10. How do you test method-level security?
+Answer: I write positive and negative tests using Spring Security's
+test support, for example @WithMockUser(roles = "ADMIN"). I also test
+the HTTP layer with MockMvc when I need to verify URL rules,
+authentication behavior, and 401/403 responses.
+8. Recommended practices
+1. Use a SecurityFilterChain bean for modern HTTP security
+   configuration.
+2. Enable method authorization explicitly with @EnableMethodSecurity.
+3. Prefer @PreAuthorize for new, expressive method-level rules.
+4. Use @PostAuthorize carefully and avoid it as the only check for
+   side-effecting methods.
+5. Keep authorization rules close to sensitive business operations.
+6. Apply least privilege and avoid overusing administrator roles.
+7. Keep complex ownership/permission checks in a dedicated, testable
+   authorization component.
+8. Test both permitted and denied access paths.
+9. Review role/authority naming and the ROLE_ prefix carefully.
+10. Reassess CSRF, CORS, session, and token settings based on the
+    application's actual authentication model.
+9. A concise interview summary
+"Spring Security provides authentication and authorization for Spring
+applications. I normally configure HTTP-level access using a
+SecurityFilterChain and enable fine-grained method authorization using
+@EnableMethodSecurity. For method checks, I prefer @PreAuthorize
+because it supports roles, authorities, ownership checks and SpEL
+expressions before the business method executes. I use @PostAuthorize
+only when the decision depends on the returned object, keeping in mind
+that the method has already executed. @Secured and JSR-250 annotations
+such as @RolesAllowed, @PermitAll and @DenyAll are alternatives
+that must be enabled explicitly. I also understand proxy-based method
+interception, so I avoid self-invocation pitfalls, enforce important
+rules at the service layer, follow least privilege, and test both
+positive and negative authorization scenarios."
+10. Version and documentation note
+This document uses the modern Spring Security configuration style used
+with current Spring Boot applications. Exact APIs and defaults can vary
+by Spring Boot / Spring Security version. Confirm the configuration
+against the version used by the project.

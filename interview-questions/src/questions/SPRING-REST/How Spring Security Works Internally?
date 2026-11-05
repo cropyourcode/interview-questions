@@ -1,0 +1,14 @@
+How Spring Security Works Internally?
+
+
+Follow up questions:
+Authentication vs Authorization
+Spring Security Filter Chain
+AuthenticationManager vs AuthenticationProvider
+UserDetailsService
+PasswordEncoder
+SecurityContextHolder
+JWT Authentication
+Role-Based Access Control
+CSRF Protection
+Method-Level Security
