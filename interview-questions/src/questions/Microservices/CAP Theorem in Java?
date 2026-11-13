@@ -1,0 +1,11 @@
+CAP Theorem is one of the most important concepts in Distributed Systems and Microservices Architecture.
+
+For a Java developer with 10 years of experience, interviewers expect more than just the definition. They expect you to explain:
+- What is CAP Theorem?
+- What are Consistency, Availability and Partition Tolerance?
+- Why can we not guarantee all three simultaneously?
+- What are CP, AP and CA systems?
+- How does CAP apply to Java microservices?
+- How do databases like MongoDB, Cassandra and PostgreSQL relate to CAP?
+- What happens during a network failure?
+- How does CAP affect API design, transactions and data consistency?

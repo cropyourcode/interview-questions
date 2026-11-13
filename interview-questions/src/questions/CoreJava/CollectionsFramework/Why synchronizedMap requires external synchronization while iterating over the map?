@@ -1,0 +1,65 @@
+Collections.synchronizedMap() makes each single method call thread-safe, but iterating takes many calls in a row, so you have to lock manually around the whole loop.
+
+1. What synchronizedMap does
+
+It wraps a map so that every method (put, get, remove and so on) takes a lock first. Two threads can’t be inside those methods at the same moment.
+
+java
+Map<String, Integer> map = Collections.synchronizedMap(new HashMap<>());
+map.put("a", 1);   // thread-safe
+map.get("a");      // thread-safe
+2. Why iteration is different
+
+A for loop over a map isn’t one operation. It’s many small ones:
+
+java
+for (String key : map.keySet()) {   // 1. get iterator
+    System.out.println(key);         // 2. next()... next()... next()...
+}
+
+Each next() call is safe by itself, but between those calls the lock is released. Another thread can sneak in and change the map in the gaps:
+
+Thread A (looping):   next() ......... next() ......... next()
+Thread B (writing):             put("x")  ← slips in between
+
+When Thread A calls next() again, the iterator notices the map was modified behind its back and throws ConcurrentModificationException. In the worst case you could see inconsistent data instead of an exception.
+
+3. The fix: lock the whole loop yourself
+
+The documentation says you must synchronize on the wrapper map object while iterating:
+
+java
+Map<String, Integer> map = Collections.synchronizedMap(new HashMap<>());
+
+synchronized (map) {                      // hold the lock for the whole loop
+    for (String key : map.keySet()) {
+        System.out.println(key + " = " + map.get(key));
+    }
+}
+
+While Thread A is inside this synchronized (map) block, Thread B’s put has to wait, because it needs the same lock. When the loop finishes, B can continue. This is what “external synchronization” means: you write the synchronized block, because the map can’t do it for you.
+
+You must lock on the same object the wrapper locks on, which is the map returned by synchronizedMap(...), not the original HashMap you passed in.
+
+4. The downside
+
+While one thread iterates, every other thread that touches the map waits. With a big map or a slow loop body, this becomes a bottleneck.
+
+5. The better alternative
+
+ConcurrentHashMap doesn’t have this problem. Its iterators are designed to work while other threads are writing, and they won’t throw ConcurrentModificationException:
+
+java
+Map<String, Integer> map = new ConcurrentHashMap<>();
+
+for (String key : map.keySet()) {   // no manual lock needed
+    System.out.println(key);
+}
+
+The iterator is weakly consistent: it may or may not show changes made while you loop, but it won’t crash or corrupt anything.
+
+6. Interview answer in one line
+
+synchronizedMap locks each individual method call, but compound operations like iteration (and check-then-put) aren’t atomic, so you must wrap them in synchronized (map) { ... } yourself. ConcurrentHashMap avoids that.
+
+The same applies to check-then-act code like if (!map.containsKey(k)) map.put(k, v);. Two threads can both pass the check, so that also needs an external synchronized block (or putIfAbsent on a ConcurrentHashMap). That is a common follow-up question too.

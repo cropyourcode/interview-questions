@@ -1,0 +1,685 @@
+Suppose your application receives a very large JSON payload, approximately 50 MB to 500 MB. How would you store it in a database table?
+What database column type would you choose, and how would you handle performance, retrieval and scalability?
+Point to understand your decisions around database design, memory management, indexing, transaction management, performance and scalability.
+
+
+======
+
+1. First understand the problem
+        Suppose your application receives this JSON from an external system:
+        {
+          "requestId": "REQ-1001",
+          "customerId": "CUST-101",
+          "transactionDate": "2026-11-04",
+          "customerDetails": {
+            "name": "Prakash",
+            "email": "prakash@example.com"
+          },
+          "transactions": [
+            {
+              "transactionId": "TXN-001",
+              "amount": 1000,
+              "currency": "INR"
+            },
+            {
+              "transactionId": "TXN-002",
+              "amount": 2000,
+              "currency": "INR"
+            }
+          ]
+        }
+
+        Now imagine that instead of a few transactions, the JSON contains:
+        - 1 million transaction records.
+        - Nested objects and arrays.
+        - Large customer details.
+        - Historical information.
+        - Additional metadata.
+
+        The complete JSON payload might be 100 MB or more.
+        The first question I would ask is: Do we need to query individual JSON fields, or do we only need to store and retrieve the complete JSON document?
+        That decision influences the database design.
+
+
+2. Different ways to store JSON in a database
+        There are multiple approaches depending on the database and business requirement.
+
+        Database	        Suitable storage type	       Description
+        -------------------------------------------------------------------------------------------
+        PostgreSQL	                JSONB,JSON	        Native JSON support
+        MySQL	                        JSON	        Native JSON data type
+        SQL Server	                NVARCHAR(MAX)	    JSON stored as text
+        Oracle	            Native JSON / CLOB / BLOB	Depends on Oracle version and configuration
+        MongoDB	                     BSON document	    Document-oriented storage
+
+        For a relational database, these are the main choices:
+        1. JSON / JSONB column.
+        2. CLOB / TEXT / NVARCHAR(MAX).
+        3. BLOB (binary storage).
+        4. Separate normalized tables.
+        5. External object storage with a database reference.
+        Let's understand when to use each.
+
+3. Approach 1: Store JSON directly in a database column
+        A. PostgreSQL – JSONB
+            PostgreSQL provides two important data types:
+            - JSON: Stores the original JSON text.
+            - JSONB: Stores JSON in a decomposed binary representation, optimized for querying and indexing.
+            Example table:
+            CREATE TABLE api_request (
+                id BIGSERIAL PRIMARY KEY,
+                request_id VARCHAR(100),
+                payload JSONB,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+
+            Insert JSON:
+            INSERT INTO api_request (request_id, payload)
+            VALUES (
+                'REQ-1001',
+                '{
+                   "customerId": "CUST-101",
+                   "amount": 1000,
+                   "status": "SUCCESS"
+                }'
+            );
+
+
+            Retrieve complete JSON:
+            SELECT payload
+            FROM api_request
+            WHERE request_id = 'REQ-1001';
+
+
+            Query a specific JSON field:
+            SELECT payload ->> 'customerId'
+            FROM api_request;
+
+
+            Filter using a JSON field:
+            SELECT *
+            FROM api_request
+            WHERE payload ->> 'status' = 'SUCCESS';
+
+
+            Advantages:
+            - Native JSON support.
+            - JSON field querying.
+            - GIN indexes for JSONB queries.
+            - Useful when JSON structure is flexible.
+            Disadvantages:
+            - Large JSON documents consume database storage and memory.
+            - Updating JSONB can involve rewriting the stored value.
+            - Indexing large documents can increase storage and write overhead.
+            - PostgreSQL has a per-field size limit of approximately 1 GB.
+            Important: JSONB is not automatically the best option for a 500 MB document. Benchmark storage, write latency, retrieval and indexing before choosing it.
+        B. SQL Server – NVARCHAR(MAX)
+            Since SQL Server is commonly used in enterprise Java backend applications, this is particularly relevant.
+
+            SQL Server supports storing large JSON text using NVARCHAR(MAX).
+
+            Example table:
+            CREATE TABLE API_REQUEST (
+                ID BIGINT IDENTITY(1,1) PRIMARY KEY,
+                REQUEST_ID VARCHAR(100),
+                JSON_PAYLOAD NVARCHAR(MAX),
+                CREATED_DATE DATETIME DEFAULT GETDATE()
+            );
+
+
+            Insert JSON:
+            INSERT INTO API_REQUEST (
+                REQUEST_ID,
+                JSON_PAYLOAD
+            )
+            VALUES (
+                'REQ-1001',
+                N'{
+                    "customerId": "CUST-101",
+                    "amount": 1000,
+                    "status": "SUCCESS"
+                }'
+            );
+
+
+            Retrieve:
+            SELECT JSON_PAYLOAD
+            FROM API_REQUEST
+            WHERE REQUEST_ID = 'REQ-1001';
+
+
+            Extract a JSON field:
+            SELECT JSON_VALUE(JSON_PAYLOAD, '$.customerId')
+            FROM API_REQUEST;
+
+
+            Validate JSON:
+            SELECT ISJSON(JSON_PAYLOAD)
+            FROM API_REQUEST;
+
+
+            Advantages:
+            - Supports large JSON text.
+            - Integrates with existing relational tables.
+            - SQL Server JSON functions allow querying JSON properties.
+            - NVARCHAR(MAX) supports up to approximately 2 GB of storage in bytes.
+            Disadvantages:
+            - JSON is stored as text rather than a native binary JSON column in traditional SQL Server implementations.
+            - Searching JSON properties can be expensive without appropriate indexing.
+            - Large payloads can increase transaction log usage and backup size.
+        C. MySQL – JSON
+            MySQL has a native JSON data type.
+            CREATE TABLE api_request (
+                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                request_id VARCHAR(100),
+                payload JSON
+            );
+
+            Insert:
+            INSERT INTO api_request (request_id, payload)
+            VALUES (
+                'REQ-1001',
+                '{"customerId":"CUST-101","status":"SUCCESS"}'
+            );
+
+            Extract a field:
+            SELECT
+                JSON_UNQUOTE(
+                    JSON_EXTRACT(payload, '$.customerId')
+                )
+            FROM api_request;
+
+            MySQL validates JSON documents and stores them in an optimized internal representation. Its practical document size is constrained by the maximum packet size, memory and other server limits.
+
+4. Approach 2: Store JSON in CLOB / TEXT / BLOB
+        Sometimes the requirement is not to query JSON fields. The requirement is simply to store the complete payload and retrieve it later.
+
+        In that case, consider large-object storage.
+        Type	Purpose
+        CLOB	Large character data
+        TEXT / LONGTEXT	Large text data, database-dependent
+        BLOB	Binary data
+        NVARCHAR(MAX)	Large Unicode text in SQL Server
+
+        When should you choose CLOB?
+        If the JSON is textual and you want to preserve its content as text, CLOB or an equivalent large-text type is a reasonable choice.
+        When should you choose BLOB?
+        If you are storing compressed or encrypted JSON bytes, BLOB can be appropriate.
+
+        For example:
+        Original JSON
+             |
+             v
+        Compression (GZIP)
+             |
+             v
+        Binary data
+             |
+             v
+        Store in BLOB column
+
+
+        Advantages of compression:
+        - Reduced storage requirements.
+        - Potentially lower network transfer.
+        - Lower storage costs.
+        Disadvantages:
+        - Additional CPU consumption.
+        - Decompression required before reading.
+        - JSON fields cannot be queried directly without decompression and parsing.
+        Interview point: Do not choose BLOB just because the JSON is large. Choose it when you have a genuine binary-storage requirement, such as compression or encryption.
+
+5. Approach 3: Store JSON in external object storage and save its reference in DB
+        Recommended for very large JSON payloads
+        Suppose the application receives JSON of 100 MB, 500 MB or even larger.
+        Would you always store the entire JSON directly in a relational database?
+        Not necessarily.
+        I would consider storing the actual document in object storage, such as:
+        - Azure Blob Storage.
+        - Amazon S3.
+        - Google Cloud Storage.
+        Since enterprise applications often use Azure, let's take Azure Blob Storage as an example.
+
+        Architecture diagram
+        External Client -->
+        Sends 500 MB JSON payload
+
+        Spring Boot REST API -->
+        Validation, authentication, streaming
+
+        Azure Blob Storage  -->
+        Stores actual JSON document
+
+        SQL Server / PostgreSQL
+        Stores metadata and blob reference
+
+        Document metadata
+        Request ID, file size, status, checksum
+
+        Storage reference
+        Blob key / object identifier
+
+        Database table
+        CREATE TABLE API_DOCUMENT (
+            ID BIGINT PRIMARY KEY,
+            REQUEST_ID VARCHAR(100),
+            STORAGE_TYPE VARCHAR(30),
+            STORAGE_REFERENCE VARCHAR(500),
+            FILE_SIZE BIGINT,
+            CONTENT_TYPE VARCHAR(100),
+            CHECKSUM VARCHAR(100),
+            STATUS VARCHAR(30),
+            CREATED_DATE DATETIME
+        );
+
+
+        Example record:
+        Column	Value
+        ID	1001
+        REQUEST_ID	REQ-1001
+        STORAGE_TYPE	AZURE_BLOB
+        STORAGE_REFERENCE	documents/2026/REQ-1001.json
+        FILE_SIZE	524288000
+        CONTENT_TYPE	application/json
+        CHECKSUM	SHA-256 value
+        STATUS	COMPLETED
+
+        Now the database stores only metadata, while the actual JSON resides in Azure Blob Storage.
+        Advantages
+        1. Database storage is reduced.
+        2. Database backups become more manageable.
+        3. Object storage is designed for large files and scalable storage.
+        4. You can retrieve documents independently of relational queries.
+        5. You can use lifecycle policies and archival storage.
+        Important consideration
+        Object storage and a relational database generally do not participate in one shared ACID transaction.
+
+        For example:
+        1. JSON successfully uploaded to Azure Blob.
+        2. Database insert fails.
+        Now you have an orphaned blob.
+
+IMP:     A production implementation should handle this using upload states, retries, idempotency and cleanup jobs.
+        For stronger coordination, use an appropriate saga or outbox-based workflow.
+
+6. Approach 4: Split the huge JSON into multiple database records
+        Sometimes the business requirement explicitly says that the JSON must be stored in the database.
+        In this situation, you can consider storing it in chunks.
+        For example, suppose the JSON is 100 MB.
+        Instead of storing one large payload, split it into multiple chunks.
+
+        Original JSON – 100 MB
+        Large JSON document
+
+        Split into 10 MB chunks
+
+        Chunk 1
+        10 MB
+
+        Chunk 2
+        10 MB
+
+        Chunk 3
+        10 MB
+
+        Chunk 4
+        10 MB
+
+        Chunk 5
+        10 MB
+
+        Chunk 6
+        10 MB
+
+        Chunk 7
+        10 MB
+
+        Chunk 8
+        10 MB
+
+        Chunk 9
+        10 MB
+
+        Chunk 10
+        10 MB
+
+        Database: 10 records linked using document_id and chunk_sequence
+
+        Example table:
+        CREATE TABLE JSON_DOCUMENT_CHUNK (
+            DOCUMENT_ID BIGINT,
+            CHUNK_SEQUENCE INT,
+            CHUNK_DATA VARCHAR(MAX),
+            PRIMARY KEY (DOCUMENT_ID, CHUNK_SEQUENCE)
+        );
+
+        Example:
+        DOCUMENT_ID	CHUNK_SEQUENCE	CHUNK_DATA
+        1001	1	First 10 MB
+        1001	2	Second 10 MB
+        1001	3	Third 10 MB
+        1001	4	Fourth 10 MB
+
+        To retrieve the complete document:
+        SELECT CHUNK_DATA
+        FROM JSON_DOCUMENT_CHUNK
+        WHERE DOCUMENT_ID = 1001
+        ORDER BY CHUNK_SEQUENCE;
+
+
+        Application code concatenates the chunks in sequence.
+        Important: This is a specialized approach, not my default recommendation. Arbitrarily splitting JSON text does not create
+         independently valid JSON documents. You need to reassemble the original bytes or characters in exactly the right order.
+        Also, chunking introduces additional complexity in transaction management, retrieval, integrity validation and indexing.
+        If the JSON contains a large array of independent business records, it may be better to split it at the logical record level
+         rather than at arbitrary byte boundaries.
+============================
+IMP: Part 5: How to implement this in Java Spring Boot?
+             How would you receive a 100 MB JSON payload in Spring Boot and store it in a database without creating memory issues?
+
+        The key concept is streaming instead of loading the entire JSON into memory.
+
+7. Approach A: Normal Spring Boot implementation
+        A simple implementation might look like this:
+        @RestController
+        @RequestMapping("/api/documents")
+        public class DocumentController {
+            private final DocumentService documentService;
+            public DocumentController(DocumentService documentService) {
+                this.documentService = documentService;
+            }
+
+            @PostMapping
+            public ResponseEntity<String> saveDocument(
+                    @RequestBody String json) {
+                documentService.save(json);
+                return ResponseEntity.ok("Document saved");
+            }
+        }
+
+
+        Service:
+        @Service
+        public class DocumentService {
+            private final DocumentRepository repository;
+            public DocumentService(DocumentRepository repository) {
+                this.repository = repository;
+            }
+            public void save(String json) {
+                DocumentEntity entity = new DocumentEntity();
+                entity.setPayload(json);
+                repository.save(entity);
+            }
+        }
+
+
+        Entity:
+        @Entity
+        @Table(name = "API_DOCUMENT")
+        public class DocumentEntity {
+            @Id
+            @GeneratedValue(strategy = GenerationType.IDENTITY)
+            private Long id;
+            @Lob
+            private String payload;
+            // Getters and setters
+        }
+
+
+        What is the problem with this approach?
+
+        For a 500 MB JSON:
+        1. Spring deserializes the HTTP request into a Java String.
+        2. The complete JSON is held in JVM heap memory.
+        3. JPA/Hibernate may create additional objects or buffers.
+        4. JDBC must transfer the content to the database.
+        5. Multiple concurrent requests can create substantial memory pressure.
+        A large Java String also uses UTF-16 representation internally, so the heap footprint can be significantly larger than the UTF-8 network payload.
+
+        For small or moderate JSON documents, this implementation can be acceptable. For extremely large payloads, I would not use it without carefully evaluating memory limits.
+
+8. Approach B: Stream JSON using Jackson TODO
+        Jackson provides streaming APIs to process JSON without converting the entire document into a Java object graph.
+
+        For example:
+            JsonFactory factory = new JsonFactory();
+            try (JsonParser parser =
+                     factory.createParser(inputStream)) {
+                while (parser.nextToken() != null) {
+                    JsonToken token = parser.currentToken();
+                    if (token == JsonToken.FIELD_NAME) {
+                        System.out.println(
+                            parser.currentName()
+                        );
+                    }
+                }
+            }
+
+        Here:
+        - InputStream reads data incrementally.
+        - JsonParser processes tokens.
+        - The application does not need to deserialize the complete JSON into a large POJO.
+        - Memory consumption can be much lower.
+        However, this example only demonstrates streaming parsing. It does not itself store the complete original JSON in the database.
+
+        If you need to preserve the original document, you can stream the incoming bytes to object storage or a temporary file while calculating a checksum,
+        then store the metadata.
+
+9. Approach C: Stream directly into a database using JDBC TODO
+        If the requirement is to store the complete JSON directly in a database, JDBC provides stream-oriented methods.
+        For a text column such as SQL Server NVARCHAR(MAX), you can use a character stream.
+
+        Example:
+        public void saveJson(
+                Connection connection,
+                Reader jsonReader,
+                long jsonLength) throws SQLException {
+            String sql = """
+                INSERT INTO API_DOCUMENT (JSON_PAYLOAD)
+                VALUES (?)
+                """;
+            try (PreparedStatement ps =
+                     connection.prepareStatement(sql)) {
+                ps.setCharacterStream(
+                    1,
+                    jsonReader,
+                    jsonLength
+                );
+                ps.executeUpdate();
+            }
+        }
+
+
+        For binary data, use setBinaryStream().
+        ps.setBinaryStream(1, inputStream, fileSize);
+
+        Why is this better?
+        Instead of constructing one huge String, the application can pass data through a stream.
+        Important caveat: JDBC streaming does not guarantee zero-copy behaviour. The JDBC driver, database and connection pool may still buffer data internally.
+        Test with your actual database driver and payload sizes.
+        Also, the transaction remains open while the document is being inserted, so long-running uploads need careful connection-pool and timeout management.
+
+Part 6: Performance and scalability considerations TODO
+        10. What problems can occur when storing huge JSON in a database?
+        An interviewer may expect you to identify the following problems.
+            Problem	Impact	            Possible                       solution
+            Large JVM heap usage	    OutOfMemoryError	        Streaming
+            Large database records	    Storage pressure	        Object storage
+            Slow insert operations	    Increased latency	        Batch/streaming writes
+            Slow retrieval	            Network and memory
+                                                overhead	        Partial retrieval or streaming
+            Expensive JSON queries	    High CPU	                Selective indexing
+            Large transaction logs	    Increased disk usage	    Operational planning
+            Concurrent uploads	        Connection exhaustion	    Backpressure and concurrency limits
+            Large backups	            Backup and restore delays	Retention and archival
+            Duplicate requests	        Duplicate documents	        Idempotency key
+            Failed uploads	            Inconsistent storage	    Retry and cleanup strategy
+
+11.How would you optimize JSON retrieval?
+        Suppose the database contains 100 MB JSON documents, but the API only needs the customer's ID and status.
+        Would you retrieve the complete JSON?
+        No. I would retrieve only the required fields wherever the database supports efficient JSON querying.
+
+        PostgreSQL example:
+        SELECT
+            payload ->> 'customerId' AS customer_id,
+            payload ->> 'status' AS status
+        FROM api_request
+        WHERE request_id = 'REQ-1001';
+
+        SQL Server example:
+        SELECT
+            JSON_VALUE(JSON_PAYLOAD, '$.customerId')
+                AS CUSTOMER_ID,
+            JSON_VALUE(JSON_PAYLOAD, '$.status')
+                AS STATUS
+        FROM API_REQUEST
+        WHERE REQUEST_ID = 'REQ-1001';
+
+
+        If those fields are frequently searched, I would consider extracting them into normal relational columns and indexing those columns.
+        This avoids repeatedly scanning a huge JSON document.
+
+12.How would you handle JSON indexing?
+        The important principle is: Don't index everything just because it is JSON.
+        For example, if customer ID and status are frequently queried, index those specific properties.
+
+        PostgreSQL:
+        CREATE INDEX idx_api_status
+        ON api_request ((payload ->> 'status'));
+
+        SQL Server:
+        ALTER TABLE API_REQUEST
+        ADD CUSTOMER_ID AS
+            JSON_VALUE(JSON_PAYLOAD, '$.customerId');
+
+        CREATE INDEX idx_customer_id
+        ON API_REQUEST(CUSTOMER_ID);
+
+        This is useful when the application frequently filters based on those properties.
+        For PostgreSQL, GIN indexes are also available for JSONB containment and related query patterns.
+
+13. How would you decide between a database and object storage?
+        This is probably the most important architectural question in the entire discussion.
+        Requirement	                                    My preferred approach
+        ---------------------------------------------------------------------
+        Small JSON, frequent field queries	            JSONB / database JSON
+        Medium JSON, relational transactions	        Database JSON or text
+        Large JSON, occasional full retrieval	        Object storage + DB metadata
+        Very large JSON, rarely queried	                Object storage
+        Large JSON with searchable business fields	    Relational columns + object storage
+        Compressed/encrypted JSON bytes	                BLOB or object storage
+        Frequently queried independent array elements	Normalize into relational tables or separate documents
+
+        These are architectural guidelines, not fixed size thresholds. The right decision depends on payload size, request frequency, query patterns,
+        latency requirements and database capacity.
+
+Part 7: Important follow-up interview questions
+        These are additional questions an interviewer may ask after your initial answer.
+        Q49. What if the JSON payload is 500 MB and the application receives 100 requests simultaneously?
+        Answer:
+            The total incoming payload could be approximately 50 GB.
+            I would not simply deserialize all requests into Java Strings and store them using JPA.
+            My approach would be:
+            1. Configure API Gateway or ingress request-size limits.
+            2. Stream incoming request data instead of loading everything into heap memory.
+            3. Apply backpressure and limit concurrent uploads.
+            4. Upload the document to object storage.
+            5. Store metadata and the object reference in the database.
+            6. Process validation asynchronously if the business flow permits.
+            7. Monitor heap usage, GC pauses, upload latency and connection-pool utilization.
+            I would also implement idempotency to avoid duplicate document creation during retries.
+
+Q50. How do you handle a failure between uploading JSON to Azure Blob and inserting metadata into SQL Server?
+        Answer:
+        This is a distributed consistency problem.
+        I would use an upload state machine.
+
+        RECEIVED-->
+        UPLOADING-->
+        BLOB_UPLOADED-->
+        COMPLETED(Metadata persisted)
+
+        Failure handling
+        If the upload or database operation fails, retain a retryable state and use a scheduled reconciliation job to
+        detect orphaned blobs or incomplete records.
+        I would also use deterministic object keys and idempotency keys so retries do not create unnecessary
+        duplicate documents.
+
+Q51. Would you use JPA or JDBC for storing huge JSON?
+        Answer:
+            It depends on the payload size and requirements.
+            JPA/Hibernate	                                    JDBC
+            Convenient ORM abstraction	                        More control over SQL
+            Entity-based persistence	                        Stream-oriented parameter binding
+            Large String may consume substantial memory	        Can use Reader/InputStream
+            ORM lifecycle and persistence context overhead	    Lower ORM overhead
+            Suitable for normal application payloads	        Often preferable for very large payloads
+
+            For very large JSON, I would lean towards JDBC streaming or object storage rather than loading the complete content into a JPA entity.
+            But I would benchmark the actual driver and database before making the final decision.
+
+Q52. How would you validate a 500 MB JSON document?
+        Answer:
+            I would avoid loading the complete document into a POJO.
+            Instead:
+            - Use Jackson's streaming parser.
+            - Validate required fields as tokens are encountered.
+            - Validate the JSON structure.
+            - Calculate a checksum while reading.
+            - Reject invalid documents early.
+            - Apply maximum payload-size and processing-time limits.
+            If full JSON Schema validation is required, I would choose a streaming-capable validation strategy or process the document in a controlled asynchronous
+            pipeline.
+
+Q53. How would you store a JSON document securely?
+        Answer:
+        I would consider:
+            1. Encryption at rest using database or object-storage encryption.
+            2. TLS for data in transit.
+            3. Access control using managed identities or service principals.
+            4. Avoiding public access to object-storage containers.
+            5. Avoiding sensitive JSON content in application logs.
+            6. Applying data-retention and deletion policies.
+            7. Recording audit information for document access.
+
+Q54. What if the business wants to search inside a 500 MB JSON document frequently?
+        Answer:
+        I would challenge the data model first.
+        If the application frequently searches individual attributes or transaction records, storing everything as one giant JSON document may not be the right design.
+        I would consider:
+            - Extracting frequently queried fields into relational columns.
+            - Storing independent business records in normalized tables.
+            - Using PostgreSQL JSONB with selective indexing for suitable query patterns.
+            - Using a dedicated search engine if full-text or complex document search is required.
+            - Keeping the original JSON in object storage for audit and archival.
+        The important thing is to separate the raw document from the searchable business data.
+
+Part 8: Best interview answer – Speak as a 10-year experienced Java developer
+        Here is how I would answer this question in an actual technical interview.
+        Interview-ready answer
+        Recommended
+
+        "First, I would understand the size of the JSON payload, how frequently we need to access it, and whether we
+        need to query individual JSON properties or simply store and retrieve the entire document.
+        If it is a relatively small or medium-sized JSON document and we need to query its fields, I would consider
+        native JSON support such as JSONB in PostgreSQL or NVARCHAR(MAX) with SQL Server JSON functions.
+        However, if we are dealing with very large documents, for example 100 MB or 500 MB, I would evaluate whether
+        storing the entire document in a relational database is actually necessary.
+        My preferred architecture for such large payloads would generally be to store the original JSON in object
+        storage, such as Azure Blob Storage or Amazon S3, and maintain the document metadata, storage reference,
+        request ID, checksum and processing status in a relational database.
+        From the Java Spring Boot perspective, I would avoid receiving the complete JSON as a String or deserializing
+        it into a large POJO. I would prefer streaming using InputStream and Jackson's streaming API to control JVM
+        heap consumption.
+        I would also consider compression, encryption, idempotency, retry mechanisms, backpressure and asynchronous
+        processing.
+        If the requirement explicitly mandates database storage, I would evaluate appropriate large-text or binary
+        column types and use JDBC streaming rather than unnecessarily loading the complete document into memory.
+        Finally, I would benchmark write and read performance, transaction-log growth, database storage, backup impact
+         and concurrent request handling before finalizing the architecture.
+
+
+
+

@@ -1,0 +1,35 @@
+
+@Service
+public class DocumentService {
+    private final DocumentRepository repository;
+    public DocumentService(DocumentRepository repository) {
+        this.repository = repository;
+    }
+
+    public void save(String json) {
+        DocumentEntity entity = new DocumentEntity();
+        entity.setPayload(json);
+        repository.save(entity);
+    }
+}
+DocumentRepository repository; used as final insted of Autowired annotations.
+
+Constructor injection (what you wrote) is the recommended approach, and it’s the most popular style today.
+The Spring team recommends it, and since Spring 4.3 you don’t need @Autowired when a class has only one constructor.
+
+// Field injection (discouraged)
+@Service
+public class DocumentService {
+    @Autowired
+    private DocumentRepository repository;
+}
+
+// Constructor injection (recommended)
+@Service
+public class DocumentService {
+    private final DocumentRepository repository;
+
+    public DocumentService(DocumentRepository repository) {
+        this.repository = repository;
+    }
+}

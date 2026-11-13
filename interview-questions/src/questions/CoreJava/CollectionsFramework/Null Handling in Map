@@ -523,4 +523,490 @@ Q23. Does remove(key, value) work when the value is null?
     false
     This removes the entry only if the specified key is mapped to the specified value.
 
+Q24.You receive an API response containing null values. Would you store them in HashMap?
+
+    It depends on the business requirement.
+
+    For example, an employee API might return:
+    {
+      "employeeId": 101,
+      "name": "Prakash",
+      "department": null,
+      "manager": null
+    }
+
+    If null represents a valid business state, HashMap can store it.
+
+    However, in production systems, I would consider:
+    - Whether null means unknown, unavailable or not applicable.
+    - Whether an absent field has a different meaning from a field explicitly set to null.
+    - Whether downstream processing can safely handle null.
+    - Whether a DTO or a domain model would be more appropriate than a generic Map.
+    For concurrent shared data, I would avoid relying on null as a meaningful stored value in ConcurrentHashMap.
+
+Q25. How would you handle null values in a ConcurrentHashMap?
+
+    ConcurrentHashMap does not allow null values, so I would use one of the following approaches depending on the requirement.
+
+    Option 1: Use Optional as a value
+    ConcurrentHashMap<String, Optional<String>> map =
+            new ConcurrentHashMap<>();
+    map.put("A", Optional.empty());
+    map.put("B", Optional.of("Java"));
+
+    Option 2: Use a separate state
+    ConcurrentHashMap<String, String> map =
+            new ConcurrentHashMap<>();
+    map.put("A", "NOT_AVAILABLE");
+    The sentinel approach needs careful design to avoid collisions with actual business values.
+
+Q26. Is HashMap thread-safe when it contains null keys or null values?
+    No.
+    HashMap is not thread-safe, regardless of whether it contains null keys or values.
+    Example:
+    Map<String, String> map = new HashMap<>();
+    // Thread 1
+    map.put(null, "Java");
+    // Thread 2
+    map.put("A", null);
+
+    Concurrent modification without proper synchronization can lead to race conditions and inconsistent application behaviour.
+    For concurrent access, consider:
+    - ConcurrentHashMap when null keys and values are not required.
+    - Collections.synchronizedMap() when a synchronized Map wrapper is suitable.
+    - Explicit locking when compound operations need atomicity.
+    Remember that synchronizedMap requires external synchronization while iterating over the map.
+
+Q27. What happens when you use null values with Java Streams and Collectors.toMap()?
+
+    This is a useful practical question.
+    Consider:
+    List<String> names = Arrays.asList(
+        "Java", "Spring", null
+    );
+
+    Map<String, Integer> map = names.stream()
+        .collect(Collectors.toMap(
+            name -> name,
+            name -> name == null ? 0 : name.length()
+        ));
+
+    System.out.println(map);
+
+    The null key can be accepted by the default HashMap-based collector in this example because the mapped value is non-null.
+
+    Output:
+    {Java=4, Spring=6, null=0}
+
+    But consider:
+    Map<String, Integer> map = names.stream()
+        .collect(Collectors.toMap(
+            name -> name,
+            name -> name == null ? null : name.length()
+        ));
+
+    This throws NullPointerException because the standard Collectors.toMap() implementation does not accept null mapped values.
+    Interview takeaway: A HashMap may support null values, but that does not mean every Java API that builds a HashMap accepts them.
+
+Q28. What happens if you call containsValue(null) or containsKey(null)?
+    HashMap supports both operations.
+    Map<String, String> map = new HashMap<>();
+
+    map.put(null, "Java");
+    map.put("A", null);
+    map.put("B", "Spring");
+
+    System.out.println(map.containsKey(null));
+    System.out.println(map.containsValue(null));
+    System.out.println(map.containsKey("A"));
+    System.out.println(map.containsValue("Java"));
+
+
+    Output:
+    true
+    true
+    true
+    true
+
+
+    Explanation:
+    - containsKey(null) checks whether the null key exists.
+    - containsValue(null) checks whether any entry has a null value.
+    - containsKey("A") checks whether A exists.
+    - containsValue("Java") checks whether Java is present as a value.
+
+Q29. Can two different objects with the same hash code coexist as keys in HashMap?
+    Yes.
+
+    HashMap uses both hash codes and equality checks.
+    A hash collision does not mean two keys are equal.
+
+    Example:
+    Map<String, String> map = new HashMap<>();
+    String key1 = "FB";
+    String key2 = "Ea";
+    System.out.println(key1.hashCode() == key2.hashCode());
+    System.out.println(key1.equals(key2));
+    map.put(key1, "First");
+    map.put(key2, "Second");
+    System.out.println(map.size());
+
+    Output:
+    true
+    false
+    2
+
+    Explanation:
+    Both strings have the same hash code, but they are different keys because their equals() method returns false.
+    Connection to null: HashMap assigns null a hash of zero, but that does not prevent other keys from having the same hash. HashMap uses equality checks to
+    distinguish them.
+
+Q30. What happens if a custom key class has a null field?
+
+    A null field inside a key object is not the same as a null key.
+    Example:
+    class Employee {
+        String name;
+
+        Employee(String name) {
+            this.name = name;
+        }
+    }
+
+    Usage:
+    Map<Employee, String> map = new HashMap<>();
+    Employee emp = new Employee(null);
+    map.put(emp, "Developer");
+    System.out.println(map.get(emp));
+
+    Output:
+    Developer
+
+    The key itself is an Employee object. Its name field happens to be null.
+    However, when implementing equals() and hashCode(), you must handle null fields safely.
+    For example:
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (!(obj instanceof Employee other)) {
+            return false;
+        }
+        return Objects.equals(name, other.name);
+    }
+
+    //TODO
+    Senior-level observation: Mutable fields used in equals() and hashCode() can cause problems if changed after inserting an object into a HashMap.
+
+Q31.What happens when a null key is used with TreeMap and a custom comparator that doesn't handle null?
+
+    A custom comparator does not automatically mean null keys are supported.
+    Example:
+    Map<String, String> map = new TreeMap<>(
+        (a, b) -> a.compareTo(b)
+    );
+    map.put(null, "Java");
+
+    This throws NullPointerException when the comparator tries to compare null.
+
+    Correct implementation:
+    Map<String, String> map = new TreeMap<>(
+        Comparator.nullsFirst(String::compareTo)
+    );
+    This comparator explicitly handles null.
+
+Q32. What is the difference between Collections.unmodifiableMap() and Map.copyOf() regarding null?
+
+    This is a good Java 10+ interview question.
+    Consider:
+    Map<String, String> original = new HashMap<>();
+    original.put("A", null);
+
+    Option 1: Collections.unmodifiableMap()
+    Map<String, String> map =
+        Collections.unmodifiableMap(original);
+    System.out.println(map.get("A"));
+
+    Output:
+    null
+
+    It allows the null value because the original HashMap allows it.
+    It prevents modifications through the returned view, but changes made directly to the original map can still be visible.
+
+    Option 2: Map.copyOf()
+    Map<String, String> map = Map.copyOf(original);
+
+    Throws NullPointerException because Map.copyOf does not allow null keys or values.
+
+    Feature	unmodifiableMap	copyOf
+    Allows null if source allows it	Yes	No
+    Modification through returned map	No	No
+    Reflects changes to source map	Yes	No
+    Java version	Java 1.2	Java 10
+
+Q33. Does Properties allow null keys or values?
+    No.
+
+    Properties extends Hashtable, so it inherits the restriction against null keys and values.
+    Properties properties = new Properties();
+    properties.put(null, "Java"); // NPE
+    properties.put("language", null); // NPE
+
+    Properties is commonly used for configuration data.
+    Properties properties = new Properties();
+    properties.setProperty("application.name", "EmployeeService");
+    properties.setProperty("application.version", "1.0");
+
+    One additional detail: setProperty() accepts String keys and values, and does not accept null.
+
+Q34. Can a Map store a null key if its key type is String?
+    Answer: Yes.
+    Generics do not prevent null references.
+    Map<String, Integer> map = new HashMap<>();
+    map.put(null, 100);
+
+    Java generics provide compile-time type checking, but they do not enforce non-null references.
+
+    If null keys must be prohibited, enforce that requirement explicitly.
+    Objects.requireNonNull(key, "Key cannot be null");
+    map.put(key, value);
+
+Q35. What happens when you iterate over a HashMap containing null keys and values?
+    You can iterate normally.
+    Map<String, String> map = new HashMap<>();
+    map.put(null, "Java");
+    map.put("A", null);
+    map.put("B", "Spring");
+    for (Map.Entry<String, String> entry : map.entrySet()) {
+
+        System.out.println(
+            "Key: " + entry.getKey()
+            + ", Value: " + entry.getValue()
+        );
+    }
+
+    Possible output:
+    Key: null, Value: Java
+    Key: A, Value: null
+    Key: B, Value: Spring
+
+    The iteration order is not guaranteed by HashMap.
+    For insertion-order iteration, use LinkedHashMap.
+
+Q36. Can we use Optional as a key or value in HashMap?
+    Yes.
+    Example:
+    Map<String, Optional<String>> map = new HashMap<>();
+    map.put("A", Optional.of("Java"));
+    map.put("B", Optional.empty());
+    map.put("C", null);
+
+    Here:
+    - A has a present Optional.
+    - B has an empty Optional.
+    - C has an actual null value.
+    These represent three different states.
+
+    In general, avoid mixing null and Optional unless there is a clear reason. Prefer a consistent representation.
+
+Q37. Does HashMap allow null values when using replace()?
+    Answer: Yes.
+    Example:
+    Map<String, String> map = new HashMap<>();
+    map.put("A", "Java");
+    map.replace("A", null);
+    System.out.println(map.get("A"));
+    System.out.println(map.containsKey("A"));
+
+    Output:
+    null
+    true
+
+    replace() updates an existing mapping. It does not create a new entry when the key is absent.
+
+Q38. What happens if a HashMap contains a null key and you call remove(null)?
+    It removes the mapping associated with the null key.
+    Map<String, String> map = new HashMap<>();
+    map.put(null, "Java");
+    map.put("A", "Spring");
+    System.out.println(map.remove(null));
+    System.out.println(map.containsKey(null));
+
+    Output:
+    Java
+    false
+
+    The return value is the previous value associated with the null key.
+    One subtlety: if the previous value was itself null, remove() returns null, so use containsKey() before removal if you need to distinguish an absent key from
+    an existing null-valued mapping.
+
+Q40. Predict the output
+    Map<String, String> map = new HashMap<>();
+    map.put("A", null);
+    System.out.println(map.getOrDefault("A", "Java"));
+    map.putIfAbsent("A", "Spring");
+    System.out.println(map.get("A"));
+
+    Answer
+    null
+    Spring
+
+    Explanation:
+    - getOrDefault() returns null because A exists with a null value.
+    - putIfAbsent() inserts Spring because the existing value is null.
+
+Q41. Predict the output
+    Map<String, Integer> map = new HashMap<>();
+    map.put("A", 10);
+    map.put("B", null);
+    map.computeIfPresent("A", (k, v) -> v + 10);
+    map.computeIfPresent("B", (k, v) -> v + 10);
+    System.out.println(map);
+
+    Answer
+    {A=20, B=null}
+
+    Explanation:
+    - A has a non-null value, so the function executes.
+    - B has a null value, so computeIfPresent() does not execute the function.
+    - B remains mapped to null.
+
+Q42. Predict the output
+    Map<String, Integer> map = new HashMap<>();
+    map.put("A", 10);
+    map.compute("A", (k, v) -> null);
+    System.out.println(map.containsKey("A"));
+    System.out.println(map.size());
+
+    Answer
+    false
+    0
+
+    Explanation: compute() removes the mapping when the remapping function returns null.
+
+Q43. Will the following code compile? What happens at runtime?
+    Map<String, String> map = Map.of(
+        "A", "Java",
+        "B", "Spring"
+    );
+    map.put("C", "Kafka");
+
+    Answer
+    It compiles successfully but throws:
+    UnsupportedOperationException
+
+    The map is immutable.
+
+Q44. Predict the output
+    Map<String, String> map = new HashMap<>();
+    map.put(null, "Java");
+    map.put("A", null);
+    System.out.println(map.values().stream()
+        .filter(Objects::isNull)
+        .count());
+
+    Answer
+    1
+
+    Explanation: Only A has a null value. The null key's value is Java.
+
+Q45. What is the difference between putIfAbsent() and computeIfAbsent()?
+
+    Both can populate a missing or null-valued mapping, but their behaviour is different.
+    Map<String, String> map = new HashMap<>();
+    map.put("A", null);
+    map.putIfAbsent("A", "Java");
+    map.computeIfAbsent("B", key -> "Spring");
+
+    Comparison:
+    Feature	putIfAbsent()	computeIfAbsent()
+    Existing non-null value	Keeps existing	Keeps existing
+    Existing null value	Inserts supplied value	Executes function
+    Missing key	Inserts supplied value	Executes function
+    Supports lazy calculation	No	Yes
+    Function returns null	Not applicable	Does not create mapping
+
+    Real-world use case: computeIfAbsent() is useful for initializing a collection for each key.
+    Map<String, List<String>> map = new HashMap<>();
+
+    map.computeIfAbsent("Java", k -> new ArrayList<>())
+       .add("Spring Boot");
+    map.computeIfAbsent("Java", k -> new ArrayList<>())
+       .add("Hibernate");
+    System.out.println(map);
+
+    Output:
+    {Java=[Spring Boot, Hibernate]}
+
+Q46. What happens when replaceAll() returns null?
+    HashMap allows null values, so replaceAll() can replace existing values with null.
+    Map<String, String> map = new HashMap<>();
+    map.put("A", "Java");
+    map.put("B", "Spring");
+    map.replaceAll((key, value) -> null);
+    System.out.println(map);
+
+    Output:
+    {A=null, B=null}
+
+    Both keys remain present. Only their values change.
+
+Q47.putIfAbsent vs computeIfAbsent
+    putIfAbsent is also atomic, but eager.
+    The value is created before the call, even if the key already exists.
+    computeIfAbsent only creates it when needed.
+
+Q47. Are computeIfAbsent() and compute() atomic in ConcurrentHashMap?
+
+    Yes. ConcurrentHashMap provides atomic implementations of these methods.
+    For example:
+    ConcurrentHashMap<String, String> map =
+        new ConcurrentHashMap<>();
+    map.computeIfAbsent("A", key -> {
+        System.out.println("Computing value");
+        return "Java";
+    });
+
+
+    ConcurrentHashMap coordinates concurrent updates so that the mapping operation is atomic for the relevant key.
+    However, avoid long-running or blocking mapping functions because they can interfere with other updates.
+    Also remember that ConcurrentHashMap's mapping functions must not return null to create a mapping.
+
+Q48. What happens if a null key is used in a ConcurrentHashMap's get() method?
+    It throws NullPointerException.
+    ConcurrentHashMap<String, String> map =
+        new ConcurrentHashMap<>();
+    map.get(null);
+
+Q49.Common interview traps – quick comparison
+        Interview question	Correct answer
+        Can HashMap have two null keys?	No
+        Can HashMap have 100 null values?	Yes
+        Does HashMap call null.hashCode()?	No
+        What is the hash of a null key in HashMap?	0
+        Where does null key go in HashMap?	Bucket index 0
+        Is HashMap thread-safe?	No
+        Can LinkedHashMap store null?	Yes
+        Can TreeMap store null values?	Yes
+        Can TreeMap store null keys?	With a null-supporting comparator
+        Can ConcurrentHashMap store null?	No
+        Can Hashtable store null?	No
+        Can WeakHashMap store null key?	Yes
+        Can IdentityHashMap store null key?	Yes
+        Can EnumMap store null key?	No
+        Can Map.of() store null?	No
+        Does getOrDefault return default for a null-valued key?	No
+        Does putIfAbsent replace a null value?	Yes
+        Does computeIfAbsent execute for a null-valued key?	Yes
+        Does computeIfPresent execute for a null-valued key?	No
+        Does compute remove a mapping if it returns null?	Yes
+        Does merge accept a null supplied value?	No
+
+
+
 

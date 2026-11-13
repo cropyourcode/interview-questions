@@ -1,0 +1,79 @@
+Problem statement
+
+Given a HashMap<String, Integer>, replace every null value with a specified default value without changing any keys.
+
+For example:
+
+Input:
+{
+    "Java" = 100,
+    "Spring" = null,
+    "Kafka" = 200,
+    "Docker" = null
+}
+
+
+Default value: 0
+
+Expected output:
+{
+    "Java" = 100,
+    "Spring" = 0,
+    "Kafka" = 200,
+    "Docker" = 0
+}
+
+=====
+1. Recommended solution – Java 8 replaceAll()
+
+import java.util.HashMap;
+import java.util.Map;
+
+public class ReplaceNullValues {
+
+    public static void replaceNullValues(
+            Map<String, Integer> map, Integer defaultValue) {
+
+        if (map == null || map.isEmpty()) {
+            return;
+        }
+
+        map.replaceAll((key, value) ->
+                value == null ? defaultValue : value
+        );
+    }
+
+    public static void main(String[] args) {
+
+        Map<String, Integer> map = new HashMap<>();
+
+        map.put("Java", 100);
+        map.put("Spring", null);
+        map.put("Kafka", 200);
+        map.put("Docker", null);
+
+        System.out.println("Before: " + map);
+
+        replaceNullValues(map, 0);
+
+        System.out.println("After: " + map);
+    }
+}
+
+2. Alternative solutions: Approach 2: Using entrySet() and Map.Entry.setValue()
+
+public static void replaceNullValues(
+        Map<String, Integer> map, Integer defaultValue) {
+
+    if (map == null || map.isEmpty()) {
+        return;
+    }
+
+    for (Map.Entry<String, Integer> entry : map.entrySet()) {
+
+        if (entry.getValue() == null) {
+            entry.setValue(defaultValue);
+        }
+    }
+}
+

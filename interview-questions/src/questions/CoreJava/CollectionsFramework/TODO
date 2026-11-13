@@ -1,0 +1,8 @@
+HashMap internal architecture and source code.
+Hashing algorithm and index calculation.
+Collision handling and linked lists.
+Treeification and Red-Black Trees.
+Load factor, capacity and resizing.
+Why HashMap capacity is a power of 2.
+equals() and hashCode() contract.
+ConcurrentHashMap internal implementation.

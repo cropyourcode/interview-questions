@@ -1,0 +1,18 @@
+
+
+2. Different ways to store JSON in a database
+There are multiple approaches depending on the database and business requirement.
+Database	Suitable storage type	Description
+PostgreSQL	JSONB, JSON	Native JSON support
+MySQL	JSON	Native JSON data type
+SQL Server	NVARCHAR(MAX)	JSON stored as text
+Oracle	Native JSON / CLOB / BLOB	Depends on Oracle version and configuration
+MongoDB	BSON document	Document-oriented storage
+
+For a relational database, these are the main choices:
+1. JSON / JSONB column.
+2. CLOB / TEXT / NVARCHAR(MAX).
+3. BLOB (binary storage).
+4. Separate normalized tables.
+5. External object storage with a database reference.
+Let's understand when to use each.

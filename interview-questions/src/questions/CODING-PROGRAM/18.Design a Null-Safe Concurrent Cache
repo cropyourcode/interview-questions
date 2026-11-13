@@ -1,0 +1,111 @@
+Problem statement
+
+Design a thread-safe cache using ConcurrentHashMap that distinguishes between three states:
+1. MISSING – The key does not exist in the cache.
+2. CACHED_EMPTY – The key exists, but its cached result is empty.
+3. CACHED_NON_EMPTY – The key exists and contains a non-empty result.
+The cache must:
+- Support concurrent reads and writes.
+- Distinguish a cache miss from a cached empty result.
+- Avoid storing actual null values in ConcurrentHashMap.
+- Support cache updates and invalidation.
+- Be safe when multiple threads access the same key.
+
+
+===============
+Important limitation of ConcurrentHashMap
+Unlike HashMap, ConcurrentHashMap does not permit null keys or null values.
+ConcurrentHashMap with explicit cache states
+
+
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+
+public class ProductCache {
+
+    public enum CacheStatus {
+        MISSING,
+        CACHED_EMPTY,
+        CACHED_NON_EMPTY
+    }
+
+    public record CacheResult(
+            CacheStatus status,
+            List<String> products) {
+    }
+
+    private final ConcurrentHashMap<String, List<String>> cache =
+            new ConcurrentHashMap<>();
+
+    // Read cache and identify its state
+    public CacheResult get(String key) {
+
+        Objects.requireNonNull(key, "Cache key cannot be null");
+
+        List<String> products = cache.get(key);
+
+        if (products == null) {
+            return new CacheResult(
+                    CacheStatus.MISSING, List.of());
+        }
+
+        if (products.isEmpty()) {
+            return new CacheResult(
+                    CacheStatus.CACHED_EMPTY, products);
+        }
+
+        return new CacheResult(
+                CacheStatus.CACHED_NON_EMPTY, products);
+    }
+
+    // Insert or update cache
+    public void put(String key, List<String> products) {
+
+        Objects.requireNonNull(key, "Cache key cannot be null");
+        Objects.requireNonNull(products, "Products cannot be null");
+
+        // Defensive immutable copy
+        cache.put(key, List.copyOf(products));
+    }
+
+    // Remove cache entry
+    public void invalidate(String key) {
+
+        Objects.requireNonNull(key, "Cache key cannot be null");
+        cache.remove(key);
+    }
+
+    public int size() {
+        return cache.size();
+    }
+
+    public static void main(String[] args) {
+
+        ProductCache productCache = new ProductCache();
+
+        // Cached non-empty result
+        productCache.put(
+                "electronics",
+                List.of("Laptop", "Mobile"));
+
+        // Cached empty result
+        productCache.put(
+                "furniture",
+                List.of());
+
+        // Missing key
+        System.out.println(productCache.get("grocery"));
+
+        // Cached empty
+        System.out.println(productCache.get("furniture"));
+
+        // Cached non-empty
+        System.out.println(productCache.get("electronics"));
+    }
+}
+
+Output:
+CacheResult[status=MISSING, products=[]]
+CacheResult[status=CACHED_EMPTY, products=[]]
+CacheResult[status=CACHED_NON_EMPTY, products=[Laptop, Mobile]]

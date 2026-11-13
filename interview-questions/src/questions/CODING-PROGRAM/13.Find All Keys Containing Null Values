@@ -1,0 +1,68 @@
+Problem statement
+
+Given a Map<String, Integer>, find and return all keys whose corresponding values are null.
+
+The solution should handle:
+- An empty map.
+- Multiple keys with null values.
+- A map containing no null values.
+- A map containing a null key.
+- Different Map implementations such as HashMap and LinkedHashMap.
+
+
+=========
+1. Recommended solution – Java 8 Streams
+import java.util.*;
+import java.util.stream.Collectors;
+
+public class NullValueKeys {
+
+    public static List<String> findKeysWithNullValues(
+            Map<String, Integer> map) {
+
+        if (map == null || map.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return map.entrySet()
+                .stream()
+                .filter(entry -> entry.getValue() == null)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+    }
+
+    public static void main(String[] args) {
+
+        Map<String, Integer> map = new HashMap<>();
+
+        map.put("Java", 100);
+        map.put("Spring", null);
+        map.put("Kafka", 200);
+        map.put("Microservices", null);
+        map.put("Docker", 300);
+
+        List<String> result = findKeysWithNullValues(map);
+
+        System.out.println(result);
+    }
+}
+
+2. Alternative solutions
+Approach 2: Traditional for-each loop
+This is my preferred approach when readability, debugging and straightforward execution matter more than functional programming style.
+public static List<String> findNullKeys(Map<String, Integer> map) {
+
+    List<String> result = new ArrayList<>();
+
+    if (map == null || map.isEmpty()) {
+        return result;
+    }
+
+    for (Map.Entry<String, Integer> entry : map.entrySet()) {
+        if (entry.getValue() == null) {
+            result.add(entry.getKey());
+        }
+    }
+
+    return result;
+}

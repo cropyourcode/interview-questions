@@ -1,0 +1,41 @@
+TLS (Transport Layer Security) is the protocol that encrypts data while it travels over a network, so nobody between
+the sender and receiver can read or tamper with it. It is what makes http:// become https://.
+It is the modern successor to SSL, and people often still say “SSL” when they mean TLS.
+
+    Why it’s in your answer
+    “Data in transit” means data moving between two systems, for example:
+        Client to your Spring Boot API
+        Your API to the database
+        Your API to Azure Blob Storage
+
+    Without TLS, anyone on the network path can read the JSON in plain text. With TLS, they see only scrambled bytes.
+
+    Encryption at rest vs in transit
+                            Protects data	Example
+        At rest	            While stored	Encrypted database or storage disk
+        In transit (TLS)	While moving	HTTPS call carrying the JSON
+
+    You need both. Encrypting storage doesn’t help if the JSON was sent over plain HTTP, and TLS doesn’t help once the
+     data is sitting unencrypted in storage.
+
+    What TLS gives you
+        Confidentiality: Data is encrypted, so eavesdroppers can’t read it.
+        Integrity: Any tampering in transit is detected.
+        Authentication: The server proves its identity with a certificate, so you know you’re talking to the real server, not an impostor.
+    How it works, in short
+        The client connects and the server sends its certificate.
+        The client verifies the certificate against trusted authorities.
+        Both sides agree on a shared secret key.
+        All further data is encrypted with that key.
+    In your Java/Spring context
+        Expose APIs over HTTPS (server.ssl.* properties, or terminate TLS at a gateway or ingress).
+        Use TLS for database connections (for example encrypt=true for SQL Server, sslmode=require for PostgreSQL).
+        Use TLS 1.2 or 1.3, and disable older versions.
+        mTLS (mutual TLS) goes one step further: the client also presents a certificate, which is common between internal microservices.
+        Interview one-liner
+
+“TLS encrypts data in transit between client and server, giving confidentiality, integrity and server authentication, so JSON payloads can’t be read or modified on the network.”
+If they follow up, expect
+
+What’s the difference between TLS and mTLS?
+What happens during the TLS handshake?

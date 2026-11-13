@@ -1,0 +1,173 @@
+Given a Map<Integer, String>, write a Java program to count how many times each value occurs, including null.
+
+We need to:
+1. Iterate through all map values.
+2. Count the frequency of each value.
+3. Include null as a valid value.
+4. Return a frequency map containing each distinct value and its count.
+Example
+Input:
+Map<Integer, String> map = new HashMap<>();
+
+map.put(1, "Java");
+map.put(2, "Spring");
+map.put(3, "Java");
+map.put(4, null);
+map.put(5, "Kafka");
+map.put(6, null);
+map.put(7, "Spring");
+map.put(8, "Java");
+
+
+Expected output:
+Java   -> 3
+Spring -> 2
+Kafka  -> 1
+null   -> 2
+
+======
+
+1. Recommended solution – Java 8 Streams using groupingBy()
+
+
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+public class CountDuplicateValues {
+
+    public static Map<String, Long> countValues(
+            Map<Integer, String> map) {
+
+        if (map == null || map.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        return map.values()
+                .stream()
+                .collect(Collectors.groupingBy(
+                        Function.identity(),
+                        HashMap::new,
+                        Collectors.counting()
+                ));
+    }
+
+    public static void main(String[] args) {
+
+        Map<Integer, String> map = new HashMap<>();
+
+        map.put(1, "Java");
+        map.put(2, "Spring");
+        map.put(3, "Java");
+        map.put(4, null);
+        map.put(5, "Kafka");
+        map.put(6, null);
+        map.put(7, "Spring");
+        map.put(8, "Java");
+
+        Map<String, Long> result = countValues(map);
+
+        result.forEach((value, count) ->
+                System.out.println(value + " -> " + count)
+        );
+    }
+}
+=====
+
+2. Recommended solution – Traditional HashMap iteration - getOrDefault
+
+import java.util.HashMap;
+import java.util.Map;
+
+public class CountDuplicateValues {
+
+    public static Map<String, Integer> countValues(
+            Map<Integer, String> map) {
+
+        Map<String, Integer> frequencyMap = new HashMap<>();
+
+        if (map == null || map.isEmpty()) {
+            return frequencyMap;
+        }
+
+        for (String value : map.values()) {
+
+            frequencyMap.put(
+                    value,
+                    frequencyMap.getOrDefault(value, 0) + 1
+            );
+        }
+
+        return frequencyMap;
+    }
+
+    public static void main(String[] args) {
+
+        Map<Integer, String> map = new HashMap<>();
+
+        map.put(1, "Java");
+        map.put(2, "Spring");
+        map.put(3, "Java");
+        map.put(4, null);
+        map.put(5, "Kafka");
+        map.put(6, null);
+        map.put(7, "Spring");
+        map.put(8, "Java");
+
+        Map<String, Integer> result = countValues(map);
+
+        result.forEach((value, count) ->
+                System.out.println(value + " -> " + count)
+        );
+    }
+}
+
+3. Alternative solution – Using Java 8 Streams with groupingBy and Optional
+
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+public class CountDuplicateValues {
+
+    public static Map<Optional<String>, Long> countValues(
+            Map<Integer, String> map) {
+
+        if (map == null || map.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        return map.values()
+                .stream()
+                .map(Optional::ofNullable)
+                .collect(Collectors.groupingBy(
+                        Function.identity(),
+                        Collectors.counting()
+                ));
+    }
+}
+
+4. Alternative solution – Using merge()
+public static Map<String, Integer> countValues(
+        Map<Integer, String> map) {
+
+    Map<String, Integer> frequencyMap = new HashMap<>();
+
+    if (map == null || map.isEmpty()) {
+        return frequencyMap;
+    }
+
+    for (String value : map.values()) {
+
+        frequencyMap.merge(value, 1, Integer::sum);
+    }
+
+    return frequencyMap;
+}
+   ##Note
+    How does merge() work?
+    frequencyMap.merge(value, 1, Integer::sum);
+    - If the value is not present, insert it with count 1.
+    - If the value is already present, add 1 to its existing count.
+    - HashMap supports null keys, so this also counts null values correctly.
+

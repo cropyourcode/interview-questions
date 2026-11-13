@@ -1,0 +1,58 @@
+Problem statement
+
+Given a Map<String, Integer> and a key, identify whether the key is:
+1. ABSENT – The key does not exist in the map.
+2. PRESENT_NULL – The key exists, but its value is null.
+3. PRESENT_VALUE – The key exists and has a non-null value.
+This is an important Java Collections interview question because Map.get() alone cannot distinguish between an absent key and a key mapped to null
+
+===========
+
+import java.util.HashMap;
+import java.util.Map;
+
+public class MapKeyStatus {
+
+    enum KeyStatus {
+        ABSENT,
+        PRESENT_NULL,
+        PRESENT_VALUE
+    }
+
+    public static KeyStatus identifyKey(
+            Map<String, Integer> map, String key) {
+
+        if (map == null) {
+            throw new IllegalArgumentException(
+                    "Map must not be null");
+        }
+
+        if (!map.containsKey(key)) {
+            return KeyStatus.ABSENT;
+        }
+
+        if (map.get(key) == null) {
+            return KeyStatus.PRESENT_NULL;
+        }
+
+        return KeyStatus.PRESENT_VALUE;
+    }
+
+    public static void main(String[] args) {
+
+        Map<String, Integer> map = new HashMap<>();
+
+        map.put("Java", 100);
+        map.put("Spring", null);
+        map.put("Kafka", 200);
+
+        System.out.println(
+                identifyKey(map, "Docker"));
+
+        System.out.println(
+                identifyKey(map, "Spring"));
+
+        System.out.println(
+                identifyKey(map, "Java"));
+    }
+}

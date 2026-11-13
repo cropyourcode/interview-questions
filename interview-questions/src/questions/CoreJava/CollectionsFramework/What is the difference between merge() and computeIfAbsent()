@@ -1,0 +1,4 @@
+What is the difference between merge() and computeIfAbsent() here?
+- merge() is designed to combine a new value with an existing mapping.
+- computeIfAbsent() computes a value only when the key is absent or mapped to null.
+merge() is a natural fit for frequency counting.

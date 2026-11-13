@@ -1,0 +1,17 @@
+A popular shortcut: Lombok
+Many teams avoid writing the constructor by hand:
+
+java
+@Service
+@RequiredArgsConstructor
+public class DocumentService {
+    private final DocumentRepository repository;
+
+    public void save(String json) {
+        DocumentEntity entity = new DocumentEntity();
+        entity.setPayload(json);
+        repository.save(entity);
+    }
+}
+
+@RequiredArgsConstructor generates a constructor for all final fields, and Spring uses it automatically.
